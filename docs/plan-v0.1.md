@@ -1,6 +1,6 @@
 # Plan de tareas — v0.1 "Telemetry Core"
 
-Cada tarea es una rama y un pull request pequeño, con tests y una sección "Cómo funciona" en la descripción.
+Cada tarea es una rama y un pull request pequeño, con tests.
 
 | # | Tarea | Contenido | Horas estimadas |
 |---|---|---|---|
