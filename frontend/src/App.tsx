@@ -37,7 +37,10 @@ export function App() {
             <div className="clock">
               <span className="label">Tiempo de misión</span>
               <strong>{missionTime(sim.currentTick)}</strong>
-              <span className="sub">tick {sim.currentTick}</span>
+              <span className="sub">
+                tick {sim.currentTick} · <span className={station.live ? 'live on' : 'live'}>
+                  {station.live ? (sim.running ? 'en directo' : 'conectado') : 'sin conexión'}</span>
+              </span>
             </div>
             <div className={`overall s-${overall}`}>
               <span className="label">Estación</span>

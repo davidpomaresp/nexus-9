@@ -9,6 +9,8 @@ export interface Simulation {
   scenario: string;
   currentTick: number;
   openIncidents: number;
+  running: boolean;
+  speed: number;
 }
 
 export interface PowerValues {
@@ -84,6 +86,8 @@ export const api = {
   scenarios: () => call<string[]>('GET', '/scenarios'),
   create: (seed: number, scenario: string) => call<Simulation>('POST', '/simulations', { seed, scenario }),
   advance: (id: string, ticks: number) => call<Simulation>('POST', `/simulations/${id}/advance?ticks=${ticks}`),
+  run: (id: string, speed: number) => call<Simulation>('POST', `/simulations/${id}/run?speed=${speed}`),
+  pause: (id: string) => call<Simulation>('POST', `/simulations/${id}/pause`),
   modules: (id: string) => call<Module[]>('GET', `/simulations/${id}/modules`),
   incidents: (id: string) => call<Incident[]>('GET', `/simulations/${id}/incidents`),
   readings: <T>(id: string, module: ModuleName, toTick: number) =>
