@@ -1,5 +1,6 @@
 package com.nexus9.backend.simulation;
 
+import com.nexus9.backend.incident.IncidentService;
 import com.nexus9.backend.telemetry.TelemetryRepository;
 import com.nexus9.simulator.Station;
 import com.nexus9.simulator.StationSnapshot;
@@ -15,13 +16,15 @@ public class SimulationService {
 
     private final SimulationRepository simulations;
     private final TelemetryRepository telemetry;
+    private final IncidentService incidents;
     private final StationRegistry stations;
     private final TransactionTemplate tx;
 
     public SimulationService(SimulationRepository simulations, TelemetryRepository telemetry,
-            StationRegistry stations, TransactionTemplate tx) {
+            IncidentService incidents, StationRegistry stations, TransactionTemplate tx) {
         this.simulations = simulations;
         this.telemetry = telemetry;
+        this.incidents = incidents;
         this.stations = stations;
         this.tx = tx;
     }
@@ -56,6 +59,7 @@ public class SimulationService {
         try {
             StationSnapshot snapshot = station.advance();
             telemetry.append(id, snapshot);
+            incidents.evaluate(id, snapshot);
             long next = snapshot.tick() + 1;
             simulations.updateCurrentTick(id, next);
             return new Simulation(id, simulation.seed(), simulation.scenario(), next);
