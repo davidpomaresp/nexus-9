@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: nexus-9
+  datasource:
+    # Valores por defecto para desarrollo local con docker compose; se sobrescriben con variables de entorno.
+    url: ${NEXUS_DB_URL:jdbc:postgresql://localhost:5432/nexus}
+    username: ${NEXUS_DB_USER:nexus}
+    password: ${NEXUS_DB_PASSWORD:nexus}
+  flyway:
+    locations: classpath:db/migration
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
