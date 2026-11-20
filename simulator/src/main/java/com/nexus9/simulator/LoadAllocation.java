@@ -17,13 +17,13 @@ public record LoadAllocation(boolean oxygenPowered, CommsMode commsMode) {
     public static LoadAllocation decide(double availableKw, double batteryPercent) {
         double remaining = availableKw - BASE_LOAD_KW;
 
-        boolean oxygen = remaining >= OxygenSystem.GENERATOR_KW;
+        boolean oxygen = remaining + SimulationTime.EPSILON_KW >= OxygenSystem.GENERATOR_KW;
         if (oxygen) {
             remaining -= OxygenSystem.GENERATOR_KW;
         }
 
         CommsMode comms = preferredCommsMode(batteryPercent);
-        while (comms != CommsMode.OFF && comms.powerKw() > remaining) {
+        while (comms != CommsMode.OFF && comms.powerKw() > remaining + SimulationTime.EPSILON_KW) {
             comms = comms.downgrade();
         }
         return new LoadAllocation(oxygen, comms);

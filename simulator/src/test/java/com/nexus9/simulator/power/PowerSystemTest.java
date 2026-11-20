@@ -112,6 +112,8 @@ class PowerSystemTest {
         PowerSystem power = PowerSystem.standard();
         assertThatThrownBy(() -> power.panel("SOLAR_PANEL_A").setEfficiency(1.1))
                 .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> power.panel("SOLAR_PANEL_A").setEfficiency(Double.NaN))
+                .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> power.step(0, -1, new RandomSource(1)))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> power.panel("X")).isInstanceOf(NoSuchElementException.class);

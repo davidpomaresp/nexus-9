@@ -46,4 +46,15 @@ class LoadAllocationTest {
         assertThat(loads.commsMode()).isEqualTo(CommsMode.OFF);
         assertThat(loads.demandKw()).isEqualTo(LoadAllocation.BASE_LOAD_KW);
     }
+
+    @Test
+    void exactPowerBoundariesAreInclusive() {
+        // 2.4 - 2.0 is 0.3999999999999999 in floating point
+        assertThat(LoadAllocation.decide(2.4, 30).commsMode()).isEqualTo(CommsMode.MINIMAL);
+        assertThat(LoadAllocation.decide(2.4 - 1e-6, 30).commsMode()).isEqualTo(CommsMode.OFF);
+
+        assertThat(LoadAllocation.decide(5.0, 80).oxygenPowered()).isTrue();
+        assertThat(LoadAllocation.decide(5.0 - 1e-6, 80).oxygenPowered()).isFalse();
+        assertThat(LoadAllocation.decide(6.5, 80).commsMode()).isEqualTo(CommsMode.FULL);
+    }
 }

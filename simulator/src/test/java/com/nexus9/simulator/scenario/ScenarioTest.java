@@ -26,4 +26,14 @@ class ScenarioTest {
         assertThat(scenario.faultsAt(7)).isEmpty();
         assertThat(scenario.faults().getFirst().tick()).isEqualTo(5);
     }
+
+    @Test
+    void rejectsInvalidFaults() {
+        assertThatThrownBy(() -> new PanelFault(-1, "A", 0.5)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new PanelFault(0, " ", 0.5)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new PanelFault(0, "A", 1.5)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new PanelFault(0, "A", Double.NaN)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new PanelFault(0, "A", Double.POSITIVE_INFINITY))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 }

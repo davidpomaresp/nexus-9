@@ -19,7 +19,7 @@ public final class SolarPanel {
     }
 
     public void setEfficiency(double efficiency) {
-        if (efficiency < 0 || efficiency > 1) {
+        if (!(efficiency >= 0 && efficiency <= 1)) {
             throw new IllegalArgumentException("efficiency must be in [0, 1]");
         }
         this.efficiency = efficiency;
