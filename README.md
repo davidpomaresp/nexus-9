@@ -12,9 +12,32 @@ No es un panel con números aleatorios: si fallan los paneles solares, baja la g
 
 Reproducir una cadena de averías y demostrar que, aunque se reinicie el backend o lleguen eventos duplicados, **el historial sigue siendo coherente y las incidencias no se duplican**.
 
+## Cómo ejecutarlo
+
+Requisitos: Java 21 y Docker.
+
+```bash
+# Tests (unitarios + integración con PostgreSQL real vía Testcontainers)
+./mvnw verify
+
+# Aplicación completa (PostgreSQL + backend) en http://localhost:8080
+docker compose up --build
+curl localhost:8080/actuator/health
+```
+
+Para desarrollar con el IDE: `docker compose up -d postgres` y ejecutar `NexusApplication`.
+
+## Estructura
+
+```
+simulator/   Motor de simulación (Java puro, sin Spring)
+backend/     API y lógica de negocio (Spring Boot, PostgreSQL, Flyway)
+docs/        Especificación, plan y decisiones de arquitectura (ADR)
+```
+
 ## Stack (v0.1)
 
-Java 21 · Spring Boot · Maven · PostgreSQL · Flyway · JUnit 5 · Testcontainers · GitHub Actions · Docker Compose
+Java 21 · Spring Boot 4 · Maven · PostgreSQL 17 · Spring JDBC · Flyway · JUnit 5 · Testcontainers · GitHub Actions · Docker Compose
 
 ## Documentación
 
