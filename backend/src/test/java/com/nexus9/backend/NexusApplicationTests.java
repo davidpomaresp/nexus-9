@@ -16,10 +16,6 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
-/**
- * Test de humo: arranca la aplicación completa contra una PostgreSQL real (Testcontainers)
- * y comprueba que las migraciones se aplican y que el endpoint de salud responde.
- */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers
@@ -36,17 +32,17 @@ class NexusApplicationTests {
     JdbcClient jdbc;
 
     @Test
-    void lasMigracionesCreanLaTablaSimulation() {
-        Integer tablas = jdbc.sql("""
+    void migrationsAreApplied() {
+        Integer count = jdbc.sql("""
                 SELECT count(*) FROM information_schema.tables
                 WHERE table_schema = 'public' AND table_name = 'simulation'
                 """).query(Integer.class).single();
 
-        assertThat(tablas).isEqualTo(1);
+        assertThat(count).isEqualTo(1);
     }
 
     @Test
-    void elEndpointDeSaludRespondeUp() throws Exception {
+    void healthEndpointIsUp() throws Exception {
         mockMvc.perform(get("/actuator/health"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"));

@@ -1,10 +1,7 @@
 package com.nexus9.simulator;
 
 /**
- * Órbita de la estación: en cada vuelta hay una fase de luz y otra de sombra.
- *
- * <p>Una vuelta dura {@code periodTicks}; los primeros {@code sunlitTicks} son de luz y el resto
- * de sombra. Los valores por defecto (92 y 57) aproximan una órbita baja de unos 92 minutos.
+ * Each orbit starts with {@code sunlitTicks} of daylight followed by eclipse.
  */
 public record Orbit(int periodTicks, int sunlitTicks) {
 
@@ -12,17 +9,16 @@ public record Orbit(int periodTicks, int sunlitTicks) {
 
     public Orbit {
         if (periodTicks <= 0) {
-            throw new IllegalArgumentException("periodTicks debe ser positivo: " + periodTicks);
+            throw new IllegalArgumentException("periodTicks must be positive");
         }
         if (sunlitTicks < 0 || sunlitTicks > periodTicks) {
-            throw new IllegalArgumentException(
-                    "sunlitTicks debe estar entre 0 y periodTicks: " + sunlitTicks);
+            throw new IllegalArgumentException("sunlitTicks must be between 0 and periodTicks");
         }
     }
 
     public boolean isSunlit(long tick) {
         if (tick < 0) {
-            throw new IllegalArgumentException("tick no puede ser negativo: " + tick);
+            throw new IllegalArgumentException("tick must not be negative");
         }
         return tick % periodTicks < sunlitTicks;
     }

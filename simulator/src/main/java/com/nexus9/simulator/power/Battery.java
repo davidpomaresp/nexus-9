@@ -1,6 +1,5 @@
 package com.nexus9.simulator.power;
 
-/** Batería de la estación: almacena energía entre 0 y su capacidad. */
 public final class Battery {
 
     private final double capacityKwh;
@@ -8,24 +7,23 @@ public final class Battery {
 
     public Battery(double capacityKwh, double initialChargeKwh) {
         if (capacityKwh <= 0) {
-            throw new IllegalArgumentException("capacityKwh debe ser positiva: " + capacityKwh);
+            throw new IllegalArgumentException("capacityKwh must be positive");
         }
         if (initialChargeKwh < 0 || initialChargeKwh > capacityKwh) {
-            throw new IllegalArgumentException(
-                    "La carga inicial debe estar entre 0 y la capacidad: " + initialChargeKwh);
+            throw new IllegalArgumentException("initial charge out of range");
         }
         this.capacityKwh = capacityKwh;
         this.chargeKwh = initialChargeKwh;
     }
 
-    /** Guarda energía hasta llenarse. Devuelve la energía que realmente ha entrado. */
+    /** Returns the energy actually stored. */
     double charge(double energyKwh) {
         double stored = Math.min(energyKwh, capacityKwh - chargeKwh);
         chargeKwh += stored;
         return stored;
     }
 
-    /** Entrega energía hasta vaciarse. Devuelve la energía que realmente ha salido. */
+    /** Returns the energy actually delivered, which may be less than requested. */
     double discharge(double energyKwh) {
         double delivered = Math.min(energyKwh, chargeKwh);
         chargeKwh -= delivered;
