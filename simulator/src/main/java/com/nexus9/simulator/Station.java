@@ -13,6 +13,12 @@ import com.nexus9.simulator.scenario.Scenario;
  */
 public final class Station {
 
+    /**
+     * Bump whenever a change alters the output for an existing seed and scenario. Stored simulations
+     * are rebuilt by replay, so they can only continue with the model version that created them.
+     */
+    public static final int MODEL_VERSION = 2;
+
     private final long seed;
     private final Scenario scenario;
     private final RandomSource random;
@@ -24,10 +30,13 @@ public final class Station {
         this.seed = seed;
         this.scenario = scenario;
         this.random = new RandomSource(seed);
+        for (PanelFault fault : scenario.faults()) {
+            power.panel(fault.panelId());
+        }
     }
 
     public StationSnapshot advance() {
-        long tick = nextTick++;
+        long tick = nextTick;
 
         for (PanelFault fault : scenario.faultsAt(tick)) {
             power.panel(fault.panelId()).setEfficiency(fault.efficiency());
@@ -41,6 +50,7 @@ public final class Station {
         OxygenReading oxygenReading = oxygen.step(tick, loads.oxygenPowered());
         CommsReading commsReading = new CommsReading(tick, loads.commsMode());
 
+        nextTick++;
         return new StationSnapshot(tick, powerReading, oxygenReading, commsReading);
     }
 

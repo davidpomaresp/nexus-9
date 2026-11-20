@@ -15,6 +15,9 @@ public record Scenario(String name, List<PanelFault> faults) {
     private static final List<Scenario> BUILT_IN = List.of(NOMINAL, SOLAR_DEGRADATION);
 
     public Scenario {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("name is required");
+        }
         faults = faults.stream().sorted(Comparator.comparingLong(PanelFault::tick)).toList();
     }
 
