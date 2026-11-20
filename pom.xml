@@ -4,7 +4,6 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <!-- El parent de Spring Boot fija versiones compatibles de todas las dependencias (BOM). -->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -17,7 +16,7 @@
     <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>NEXUS-9</name>
-    <description>Centro de control de una estación espacial simulada</description>
+    <description>Control center for a simulated space station</description>
 
     <modules>
         <module>simulator</module>
