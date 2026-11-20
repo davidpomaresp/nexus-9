@@ -15,6 +15,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 @RequestMapping("/api")
@@ -34,9 +36,11 @@ public class SimulationController {
     private final IncidentService incidents;
     private final TelemetryRepository telemetry;
     private final SimulationQueries queries;
+    private final SimulationEvents events;
 
     SimulationController(SimulationService simulations, IncidentService incidents, TelemetryRepository telemetry,
-            SimulationQueries queries) {
+            SimulationQueries queries, SimulationEvents events) {
+        this.events = events;
         this.simulations = simulations;
         this.incidents = incidents;
         this.telemetry = telemetry;
@@ -67,10 +71,30 @@ public class SimulationController {
         if (ticks.isPresent() && toTick.isPresent()) {
             throw new IllegalArgumentException("use either ticks or toTick, not both");
         }
-        Progress progress = toTick.isPresent()
+        return response(toTick.isPresent()
                 ? simulations.advanceTo(id, toTick.get())
-                : simulations.advance(id, ticks.orElse(1));
+                : simulations.advance(id, ticks.orElse(1)));
+    }
+
+    private static SimulationResponse response(Progress progress) {
         return SimulationResponse.of(progress.simulation(), progress.openIncidents());
+    }
+
+    /** The server clock advances the simulation {@code speed} ticks every 250 ms until paused. */
+    @PostMapping("/simulations/{id}/run")
+    public SimulationResponse run(@PathVariable UUID id,
+            @RequestParam(defaultValue = "" + SimulationService.DEFAULT_SPEED) int speed) {
+        return response(simulations.run(id, speed));
+    }
+
+    @PostMapping("/simulations/{id}/pause")
+    public SimulationResponse pause(@PathVariable UUID id) {
+        return response(simulations.pause(id));
+    }
+
+    @GetMapping(path = "/simulations/{id}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter events(@PathVariable UUID id) {
+        return events.subscribe(queries.summary(id));
     }
 
     @GetMapping("/simulations/{id}/modules")

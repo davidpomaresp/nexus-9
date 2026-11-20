@@ -115,6 +115,8 @@ Cada incidencia guarda los módulos potencialmente afectados según el grafo.
 | `POST` | `/api/simulations/{id}/advance?ticks=N` | Avanza N ticks desde el tick actual (no idempotente) |
 | `POST` | `/api/simulations/{id}/advance?toTick=T` | Avanza hasta `currentTick = T`; si ya está ahí no hace nada (idempotente) |
 | `GET` | `/api/simulations/{id}` | Tick actual y resumen |
+| `POST` | `/api/simulations/{id}/run?speed=N` / `/pause` | El reloj del servidor avanza N ticks cada 250 ms hasta pausar (v0.2) |
+| `GET` | `/api/simulations/{id}/events` | Server-Sent Events: un evento `state` con el resumen cada vez que la simulación cambia (v0.2) |
 | `GET` | `/api/simulations/{id}/modules` | Estado actual de cada módulo |
 | `GET` | `/api/simulations/{id}/modules/{module}/readings?fromTick&toTick` | Historial de lecturas. Sin `fromTick`, las últimas 5.000 hasta `toTick`; lista vacía si aún no hay lecturas |
 | `GET` | `/api/simulations/{id}/incidents?status=` | Incidencias |

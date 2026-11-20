@@ -69,6 +69,8 @@ OXYGEN_LOW          421
 | `POST` | `/api/simulations` — `{"seed": 42, "scenario": "solar-degradation"}` |
 | `GET` | `/api/simulations/{id}` |
 | `POST` | `/api/simulations/{id}/advance?ticks=N` o `?toTick=T` (idempotente) |
+| `POST` | `/api/simulations/{id}/run?speed=N` y `/pause` — reloj del servidor |
+| `GET` | `/api/simulations/{id}/events` — Server-Sent Events |
 | `GET` | `/api/simulations/{id}/modules` |
 | `GET` | `/api/simulations/{id}/modules/{POWER\|OXYGEN\|COMMS}/readings?fromTick&toTick` |
 | `GET` | `/api/simulations/{id}/incidents?status=OPEN\|RESOLVED` |
@@ -87,4 +89,3 @@ Java 21 · Spring Boot 4 · PostgreSQL 17 · React 19 · TypeScript · Vite · S
 
 - Simulador como proceso separado que envía eventos por HTTP (reintentos, eventos desordenados).
 - Operadores con login y roles, y ciclo de incidencias `OPEN → ACKNOWLEDGED → RESOLVED`.
-- Alarmas en tiempo real en el panel (WebSockets).

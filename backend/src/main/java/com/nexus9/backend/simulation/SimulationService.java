@@ -6,6 +6,7 @@ import com.nexus9.simulator.Station;
 import com.nexus9.simulator.StationSnapshot;
 import com.nexus9.simulator.scenario.Scenario;
 import java.util.UUID;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -13,15 +14,20 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class SimulationService {
 
     public static final int MAX_TICKS_PER_REQUEST = 10_000;
+    public static final int MAX_SPEED = 100;
+    public static final int DEFAULT_SPEED = 5;
 
     private final SimulationRepository simulations;
     private final TelemetryRepository telemetry;
     private final IncidentService incidents;
     private final StationRegistry stations;
     private final TransactionTemplate tx;
+    private final ApplicationEventPublisher events;
 
     public SimulationService(SimulationRepository simulations, TelemetryRepository telemetry,
-            IncidentService incidents, StationRegistry stations, TransactionTemplate tx) {
+            IncidentService incidents, StationRegistry stations, TransactionTemplate tx,
+            ApplicationEventPublisher events) {
+        this.events = events;
         this.simulations = simulations;
         this.telemetry = telemetry;
         this.incidents = incidents;
@@ -35,7 +41,8 @@ public class SimulationService {
 
     public Simulation create(long seed, String scenarioName) {
         Scenario.byName(scenarioName);
-        Simulation simulation = new Simulation(UUID.randomUUID(), seed, scenarioName, 0, Station.MODEL_VERSION);
+        Simulation simulation = new Simulation(UUID.randomUUID(), seed, scenarioName, 0, Station.MODEL_VERSION,
+                false, DEFAULT_SPEED);
         simulations.insert(simulation);
         return simulation;
     }
@@ -56,6 +63,7 @@ public class SimulationService {
         for (int i = 0; i < ticks; i++) {
             progress = tx.execute(status -> step(id, Long.MAX_VALUE));
         }
+        events.publishEvent(new SimulationAdvanced(progress));
         return progress;
     }
 
@@ -73,9 +81,34 @@ public class SimulationService {
         while (true) {
             Progress progress = tx.execute(status -> step(id, targetTick));
             if (progress.simulation().currentTick() >= targetTick) {
+                events.publishEvent(new SimulationAdvanced(progress));
                 return progress;
             }
         }
+    }
+
+    /** Lets the server clock advance the simulation {@code speed} ticks per step. */
+    public Progress run(UUID id, int speed) {
+        if (speed < 1 || speed > MAX_SPEED) {
+            throw new IllegalArgumentException("speed must be between 1 and " + MAX_SPEED);
+        }
+        return setClock(id, true, speed);
+    }
+
+    public Progress pause(UUID id) {
+        return setClock(id, false, get(id).speed());
+    }
+
+    private Progress setClock(UUID id, boolean running, int speed) {
+        Progress progress = tx.execute(status -> {
+            Simulation sim = simulations.findByIdForUpdate(id)
+                    .orElseThrow(() -> new SimulationNotFoundException(id));
+            simulations.updateClock(id, running, speed);
+            return new Progress(new Simulation(sim.id(), sim.seed(), sim.scenario(), sim.currentTick(),
+                    sim.modelVersion(), running, speed), incidents.countOpen(id));
+        });
+        events.publishEvent(new SimulationAdvanced(progress));
+        return progress;
     }
 
     /** Runs one tick inside a transaction, unless the simulation is already at {@code targetTick}. */
