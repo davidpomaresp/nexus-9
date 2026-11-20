@@ -13,7 +13,7 @@ Las averías no son números aleatorios: si fallan los paneles solares baja la g
 - Escenarios con averías programadas (`nominal`, `solar-degradation`).
 - Telemetría e incidencias en PostgreSQL.
 - 5 reglas con histéresis y módulos afectados según un grafo de dependencias.
-- API REST y panel web en `http://localhost:8080` con gráficas de energía, batería, oxígeno y comunicaciones.
+- API REST y panel de control en React en `http://localhost:8080`: esquema de la estación con dependencias, órbita, gráficas de telemetría e incidencias.
 
 Lo interesante está en la consistencia: aunque se reinicie el backend o lleguen eventos duplicados, el historial es el mismo y no se duplican incidencias. Lo garantiza la base de datos (claves únicas e índice único parcial), no comprobaciones en el código. Ver [ADR 0002](docs/adr/0002-idempotencia-en-base-de-datos.md) y [ADR 0005](docs/adr/0005-reconstruir-estacion-por-replay.md).
 
@@ -29,7 +29,7 @@ flowchart LR
     INC --> DB
 ```
 
-Monolito modular con dos módulos Maven: `simulator` (sin dependencias de Spring) y `backend` (Spring Boot).
+Monolito modular con dos módulos Maven: `simulator` (sin dependencias de Spring) y `backend` (Spring Boot). El panel está en `frontend/` (React + Vite + TypeScript); Maven lo compila y lo empaqueta dentro del jar, así que se despliega un único artefacto.
 
 ## Cómo ejecutarlo
 
@@ -39,6 +39,12 @@ Requisitos: Java 21 y Docker.
 ./mvnw verify                  # tests unitarios y de integración (PostgreSQL con Testcontainers)
 docker compose up --build      # PostgreSQL + backend; panel en http://localhost:8080
 ./scripts/demo.sh              # ejecuta el escenario de avería de paneles
+```
+
+Para trabajar en el panel con recarga en caliente (con el backend arrancado en el 8080):
+
+```bash
+cd frontend && npm install && npm run dev   # http://localhost:5173
 ```
 
 Salida de la demo:
@@ -69,7 +75,7 @@ OXYGEN_LOW          421
 
 ## Stack
 
-Java 21 · Spring Boot 4 · PostgreSQL 17 · Spring JDBC · Flyway · JUnit 5 · Testcontainers · Docker · GitHub Actions
+Java 21 · Spring Boot 4 · PostgreSQL 17 · React 19 · TypeScript · Vite · Spring JDBC · Flyway · JUnit 5 · Testcontainers · Docker · GitHub Actions
 
 ## Documentación
 
