@@ -5,6 +5,7 @@ import com.nexus9.simulator.StationSnapshot;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -56,6 +57,21 @@ public class TelemetryRepository {
                         StationModule.valueOf(rs.getString("module")),
                         json.readValue(rs.getString("payload"), MAP)))
                 .list();
+    }
+
+    public Optional<TelemetryRecord> latest(UUID simulationId, StationModule module) {
+        return jdbc.sql("""
+                SELECT tick, module, payload::text AS payload FROM telemetry_event
+                WHERE simulation_id = ? AND module = ?
+                ORDER BY tick DESC
+                LIMIT 1
+                """)
+                .params(simulationId, module.name())
+                .query((rs, n) -> new TelemetryRecord(
+                        rs.getLong("tick"),
+                        StationModule.valueOf(rs.getString("module")),
+                        json.readValue(rs.getString("payload"), MAP)))
+                .optional();
     }
 
     public long count(UUID simulationId) {
