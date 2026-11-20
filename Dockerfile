@@ -7,6 +7,7 @@ COPY backend/pom.xml backend/
 RUN ./mvnw -B -q dependency:go-offline -DskipTests || true
 COPY simulator/src simulator/src
 COPY backend/src backend/src
+COPY frontend frontend
 RUN ./mvnw -B -q package -DskipTests
 
 FROM eclipse-temurin:21-jre
