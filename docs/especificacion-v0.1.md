@@ -86,7 +86,7 @@ Escenario de referencia para la demo y los tests: **`solar-degradation`** (el de
 |---|---|---|---|---|
 | `BATTERY_LOW` | POWER | carga < 20 % | carga > 25 % | HIGH |
 | `BATTERY_CRITICAL` | POWER | carga < 5 % | carga > 10 % | CRITICAL |
-| `GENERATION_DEFICIT` | POWER | generación en luz < 70 % de la nominal durante 3 ticks | ≥ 80 % durante 3 ticks | MEDIUM |
+| `GENERATION_DEFICIT` | POWER | con luz, generación < 70 % de la nominal | con luz, ≥ 80 % | MEDIUM |
 | `COMMS_DEGRADED` | COMMS | modo mínimo u off | modo completo | MEDIUM |
 | `OXYGEN_LOW` | OXYGEN | nivel < 95 % | nivel > 97 % | CRITICAL |
 
