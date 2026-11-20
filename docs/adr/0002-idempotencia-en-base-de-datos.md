@@ -1,6 +1,6 @@
 # ADR 0002 — Idempotencia garantizada por la base de datos
 
-- Estado: Propuesto
+- Estado: Aceptado
 - Fecha: 2026-11-20
 
 ## Contexto

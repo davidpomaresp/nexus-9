@@ -1,6 +1,6 @@
 # ADR 0004 — Spring JDBC (JdbcClient) en lugar de JPA/Hibernate
 
-- Estado: Propuesto
+- Estado: Aceptado
 - Fecha: 2026-11-20
 
 ## Contexto
