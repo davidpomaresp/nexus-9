@@ -1,0 +1,27 @@
+package com.nexus9.backend.api;
+
+import static org.hamcrest.Matchers.containsString;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.nexus9.backend.PostgresTestBase;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.test.web.servlet.MockMvc;
+
+@AutoConfigureMockMvc
+class WebPanelTest extends PostgresTestBase {
+
+    @Autowired
+    MockMvc mvc;
+
+    @Test
+    void servesThePanel() throws Exception {
+        mvc.perform(get("/index.html"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("NEXUS-9")));
+        mvc.perform(get("/app.js")).andExpect(status().isOk());
+    }
+}

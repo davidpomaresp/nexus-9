@@ -65,6 +65,7 @@ class IncidentServiceTest extends PostgresTestBase {
 
         assertThat(first).isTrue();
         assertThat(second).isFalse();
+        assertThat(incidents.find(sim.id(), Optional.empty()).getFirst().resolvedAtTick()).isNull();
         assertThat(incidents.find(sim.id(), Optional.empty())).hasSize(1);
     }
 
