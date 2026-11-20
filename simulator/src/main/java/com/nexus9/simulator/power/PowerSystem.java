@@ -31,11 +31,11 @@ public final class PowerSystem {
     }
 
     public PowerReading step(long tick, double demandKw, RandomSource random) {
-        if (demandKw < 0) {
-            throw new IllegalArgumentException("demandKw must not be negative");
-        }
-        boolean sunlit = orbit.isSunlit(tick);
+        return settle(tick, generate(tick, random), demandKw);
+    }
 
+    public double generate(long tick, RandomSource random) {
+        boolean sunlit = orbit.isSunlit(tick);
         double generationKw = 0.0;
         for (SolarPanel panel : panels) {
             double output = panel.outputKw(sunlit);
@@ -44,7 +44,18 @@ public final class PowerSystem {
             }
             generationKw += output;
         }
+        return generationKw;
+    }
 
+    /** Maximum power that can be delivered this tick: generation plus whatever the battery holds. */
+    public double availableKw(double generationKw) {
+        return generationKw + battery.chargeKwh() / SimulationTime.HOURS_PER_TICK;
+    }
+
+    public PowerReading settle(long tick, double generationKw, double demandKw) {
+        if (demandKw < 0) {
+            throw new IllegalArgumentException("demandKw must not be negative");
+        }
         double hours = SimulationTime.HOURS_PER_TICK;
         double servedKw;
         if (generationKw >= demandKw) {
@@ -54,8 +65,7 @@ public final class PowerSystem {
             double fromBatteryKwh = battery.discharge((demandKw - generationKw) * hours);
             servedKw = generationKw + fromBatteryKwh / hours;
         }
-
-        return new PowerReading(tick, sunlit, generationKw, demandKw, servedKw,
+        return new PowerReading(tick, orbit.isSunlit(tick), generationKw, demandKw, servedKw,
                 battery.chargeKwh(), battery.chargePercent());
     }
 

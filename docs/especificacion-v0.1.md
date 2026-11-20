@@ -46,20 +46,19 @@ React, WebSockets, autenticación y permisos, operadores, procedimientos de recu
 **OXYGEN**
 - El generador de O₂ consume **3 kW** cuando está alimentado.
 - Nivel de O₂ en la atmósfera expresado en % del nominal (100 % = sano).
-- Alimentado: el nivel tiende a 100 %. Sin alimentar: baja **0,25 puntos por tick** (consumo de la tripulación).
+- Alimentado: sube **0,5 puntos por tick** hasta 100 %. Sin alimentar: baja **0,25 puntos por tick** (consumo de la tripulación).
 
 **COMMS**
 - Consumo: **1,5 kW** en modo completo, **0,4 kW** en modo mínimo (baliza de emergencia).
 
 ### 3.4 Gestión de cargas (load shedding)
 
-Cada tick, si la energía disponible (generación + batería) no cubre el consumo:
+Prioridad de cargas: base > OXYGEN > COMMS. El consumo base (2 kW) siempre se pide.
 
-1. COMMS pasa a modo mínimo.
-2. Si sigue sin cubrirse, COMMS se apaga.
-3. OXYGEN es el último en recortarse.
+1. **Ahorro preventivo** según la carga de la batería: COMMS pasa a modo mínimo por debajo del 30 % y se apaga por debajo del 15 %.
+2. **Ajuste a la energía disponible** (generación + batería): OXYGEN se alimenta si caben sus 3 kW después del consumo base; COMMS baja de modo hasta que quepa en lo que sobra.
 
-Prioridad de cargas: base > OXYGEN > COMMS.
+Con el escenario `solar-degradation` la cascada queda así: la batería se descarga tras la avería, COMMS pasa a mínimo, luego se apaga, y finalmente el generador de O₂ se queda sin energía y el nivel de oxígeno empieza a bajar.
 
 ### 3.5 Grafo de dependencias
 
