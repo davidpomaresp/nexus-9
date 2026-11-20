@@ -1,6 +1,6 @@
 package com.nexus9.backend.incident;
 
-import com.nexus9.backend.simulation.StationModule;
+import com.nexus9.backend.domain.StationModule;
 import com.nexus9.simulator.StationSnapshot;
 import java.util.function.Predicate;
 

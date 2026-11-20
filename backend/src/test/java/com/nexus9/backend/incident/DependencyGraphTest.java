@@ -1,8 +1,8 @@
 package com.nexus9.backend.incident;
 
-import static com.nexus9.backend.simulation.StationModule.COMMS;
-import static com.nexus9.backend.simulation.StationModule.OXYGEN;
-import static com.nexus9.backend.simulation.StationModule.POWER;
+import static com.nexus9.backend.domain.StationModule.COMMS;
+import static com.nexus9.backend.domain.StationModule.OXYGEN;
+import static com.nexus9.backend.domain.StationModule.POWER;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
