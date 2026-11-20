@@ -13,7 +13,7 @@ Las averías no son números aleatorios: si fallan los paneles solares baja la g
 - Escenarios con averías programadas (`nominal`, `solar-degradation`).
 - Telemetría e incidencias en PostgreSQL.
 - 5 reglas con histéresis y módulos afectados según un grafo de dependencias.
-- API REST.
+- API REST y panel web en `http://localhost:8080` con gráficas de energía, batería, oxígeno y comunicaciones.
 
 Lo interesante está en la consistencia: aunque se reinicie el backend o lleguen eventos duplicados, el historial es el mismo y no se duplican incidencias. Lo garantiza la base de datos (claves únicas e índice único parcial), no comprobaciones en el código. Ver [ADR 0002](docs/adr/0002-idempotencia-en-base-de-datos.md) y [ADR 0005](docs/adr/0005-reconstruir-estacion-por-replay.md).
 
@@ -37,7 +37,7 @@ Requisitos: Java 21 y Docker.
 
 ```bash
 ./mvnw verify                  # tests unitarios y de integración (PostgreSQL con Testcontainers)
-docker compose up --build      # PostgreSQL + backend en http://localhost:8080
+docker compose up --build      # PostgreSQL + backend; panel en http://localhost:8080
 ./scripts/demo.sh              # ejecuta el escenario de avería de paneles
 ```
 
@@ -81,4 +81,4 @@ Java 21 · Spring Boot 4 · PostgreSQL 17 · Spring JDBC · Flyway · JUnit 5 ·
 
 - Simulador como proceso separado que envía eventos por HTTP (reintentos, eventos desordenados).
 - Operadores con login y roles, y ciclo de incidencias `OPEN → ACKNOWLEDGED → RESOLVED`.
-- Panel web con alarmas en tiempo real (WebSockets).
+- Alarmas en tiempo real en el panel (WebSockets).

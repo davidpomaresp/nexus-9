@@ -69,7 +69,6 @@ public class IncidentRepository {
     }
 
     private Incident map(ResultSet rs, int row) throws SQLException {
-        long resolved = rs.getLong("resolved_at_tick");
         return new Incident(
                 rs.getObject("id", UUID.class),
                 rs.getObject("simulation_id", UUID.class),
@@ -78,7 +77,7 @@ public class IncidentRepository {
                 Priority.valueOf(rs.getString("priority")),
                 IncidentStatus.valueOf(rs.getString("status")),
                 rs.getLong("opened_at_tick"),
-                rs.wasNull() ? null : resolved,
+                rs.getObject("resolved_at_tick", Long.class),
                 modules(rs.getArray("affected_modules")));
     }
 
