@@ -1,6 +1,6 @@
 # ADR 0003 — Simulador determinista con reloj simulado
 
-- Estado: Propuesto
+- Estado: Aceptado
 - Fecha: 2026-11-20
 
 ## Contexto
