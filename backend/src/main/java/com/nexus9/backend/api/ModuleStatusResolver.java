@@ -1,25 +1,38 @@
 package com.nexus9.backend.api;
 
+import com.nexus9.backend.domain.StationModule;
 import com.nexus9.backend.incident.Incident;
 import com.nexus9.backend.incident.Priority;
-import com.nexus9.backend.simulation.StationModule;
+import com.nexus9.backend.telemetry.TelemetryRecord;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
+/** Precedence: OFFLINE, then CRITICAL, then DEGRADED, then NOMINAL. */
 final class ModuleStatusResolver {
 
     private ModuleStatusResolver() {
     }
 
-    static ModuleStatus resolve(StationModule module, Map<String, Object> values, List<Incident> openIncidents) {
+    static ModuleResponse resolve(StationModule module, TelemetryRecord reading, List<Incident> openIncidents) {
+        Map<String, Object> values = reading == null ? Map.of() : reading.values();
+        Long tick = reading == null ? null : reading.tick();
+        Priority highest = openIncidents.stream()
+                .filter(i -> i.module() == module)
+                .map(Incident::priority)
+                .max(Comparator.naturalOrder())
+                .orElse(null);
+        return new ModuleResponse(module, status(module, values, highest), highest, tick, values);
+    }
+
+    static ModuleStatus status(StationModule module, Map<String, Object> values, Priority highestOpen) {
         if (isOffline(module, values)) {
             return ModuleStatus.OFFLINE;
         }
-        List<Incident> own = openIncidents.stream().filter(i -> i.module() == module).toList();
-        if (own.stream().anyMatch(i -> i.priority() == Priority.CRITICAL)) {
-            return ModuleStatus.CRITICAL;
+        if (highestOpen == null) {
+            return ModuleStatus.NOMINAL;
         }
-        return own.isEmpty() ? ModuleStatus.NOMINAL : ModuleStatus.DEGRADED;
+        return highestOpen == Priority.CRITICAL ? ModuleStatus.CRITICAL : ModuleStatus.DEGRADED;
     }
 
     private static boolean isOffline(StationModule module, Map<String, Object> values) {

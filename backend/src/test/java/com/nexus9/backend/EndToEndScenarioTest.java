@@ -2,7 +2,7 @@ package com.nexus9.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.nexus9.backend.incident.Incident;
+import com.nexus9.backend.domain.StationModule;
 import com.nexus9.backend.incident.IncidentService;
 import com.nexus9.backend.simulation.Simulation;
 import com.nexus9.backend.simulation.SimulationService;
@@ -48,6 +48,9 @@ class EndToEndScenarioTest extends PostgresTestBase {
         simulations.advance(disturbed.id(), 150);
 
         assertThat(telemetry.count(disturbed.id())).isEqualTo(600 * 3);
+        for (StationModule module : StationModule.values()) {
+            assertThat(history(disturbed.id(), module)).isEqualTo(history(reference.id(), module)).hasSize(600);
+        }
         assertThat(summary(disturbed.id())).isEqualTo(summary(reference.id())).isNotEmpty();
     }
 
@@ -58,9 +61,16 @@ class EndToEndScenarioTest extends PostgresTestBase {
         }
     }
 
+    private List<Object> history(UUID simulationId, StationModule module) {
+        return telemetry.find(simulationId, module, 0, Long.MAX_VALUE).stream()
+                .map(r -> (Object) List.of(r.tick(), r.values()))
+                .toList();
+    }
+
     private List<String> summary(UUID simulationId) {
         return incidents.find(simulationId, Optional.empty()).stream()
-                .map(i -> i.ruleCode() + "@" + i.openedAtTick() + "-" + i.resolvedAtTick() + ":" + i.status())
+                .map(i -> i.ruleCode() + "@" + i.openedAtTick() + "-" + i.resolvedAtTick() + ":" + i.status()
+                        + ":" + i.priority() + ":" + i.affectedModules())
                 .toList();
     }
 }

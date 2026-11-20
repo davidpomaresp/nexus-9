@@ -77,7 +77,13 @@ Escenario de referencia para la demo y los tests: **`solar-degradation`** (el de
 
 ## 4. Estados
 
-- Módulo: `NOMINAL`, `DEGRADED`, `CRITICAL`, `OFFLINE`.
+- Módulo: `NOMINAL`, `DEGRADED`, `CRITICAL`, `OFFLINE`. Se calcula al consultar, con esta precedencia:
+  1. `OFFLINE` si la última lectura indica que el módulo no funciona (POWER sin servir nada, generador de O₂ sin energía, COMMS apagado), aunque tenga incidencias.
+  2. `CRITICAL` si tiene alguna incidencia abierta de prioridad `CRITICAL`.
+  3. `DEGRADED` si tiene alguna otra incidencia abierta.
+  4. `NOMINAL` en otro caso.
+
+  Como `OFFLINE` tapa la gravedad, la respuesta incluye también `highestPriority`: la prioridad más alta de sus incidencias abiertas.
 - Incidencia v0.1: `OPEN → RESOLVED` (cierre automático con histéresis).
 
 ## 5. Reglas de incidencias (v0.1)
@@ -95,6 +101,8 @@ Cada incidencia guarda los módulos potencialmente afectados según el grafo.
 ## 6. Persistencia e idempotencia
 
 - `telemetry_event`: append-only, `event_id` único y determinista (`simulación:módulo:tick`). Duplicados ignorados con `ON CONFLICT DO NOTHING`.
+- `telemetry_event` tiene además un índice único `(simulation_id, module, tick)`: una lectura por módulo y tick aunque cambie el formato del `event_id`.
+- `simulation.model_version` guarda la versión del simulador que creó la simulación (ver ADR 0005).
 - `incident`: índice único parcial `(simulation_id, module, rule_code) WHERE status = 'OPEN'`.
 - Procesar un tick (guardar eventos + actualizar estado + abrir/cerrar incidencias) ocurre en **una transacción**.
 - Migraciones con Flyway.
@@ -104,13 +112,16 @@ Cada incidencia guarda los módulos potencialmente afectados según el grafo.
 | Método | Ruta | Descripción |
 |---|---|---|
 | `POST` | `/api/simulations` | Crea una simulación (`seed`, `scenario`) |
-| `POST` | `/api/simulations/{id}/advance?ticks=N` | Avanza N ticks |
+| `POST` | `/api/simulations/{id}/advance?ticks=N` | Avanza N ticks desde el tick actual (no idempotente) |
+| `POST` | `/api/simulations/{id}/advance?toTick=T` | Avanza hasta `currentTick = T`; si ya está ahí no hace nada (idempotente) |
 | `GET` | `/api/simulations/{id}` | Tick actual y resumen |
 | `GET` | `/api/simulations/{id}/modules` | Estado actual de cada módulo |
-| `GET` | `/api/simulations/{id}/modules/{module}/readings?fromTick&toTick` | Historial de lecturas |
+| `GET` | `/api/simulations/{id}/modules/{module}/readings?fromTick&toTick` | Historial de lecturas. Sin `fromTick`, las últimas 5.000 hasta `toTick`; lista vacía si aún no hay lecturas |
 | `GET` | `/api/simulations/{id}/incidents?status=` | Incidencias |
 
-Errores con formato `application/problem+json`.
+Las respuestas que combinan varias consultas (`GET /simulations/{id}` y `/modules`) se leen en una sola transacción de solo lectura `REPEATABLE READ`, así que todos sus datos corresponden al mismo tick. La respuesta de `advance` se calcula en la misma transacción que el último tick.
+
+Errores con formato `application/problem+json` (409 si la simulación es de otra versión del modelo).
 
 ## 8. Criterios de aceptación
 
