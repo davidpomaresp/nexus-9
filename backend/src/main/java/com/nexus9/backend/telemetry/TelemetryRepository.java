@@ -1,11 +1,11 @@
 package com.nexus9.backend.telemetry;
 
-import com.nexus9.backend.simulation.StationModule;
+import com.nexus9.backend.domain.StationModule;
 import com.nexus9.simulator.StationSnapshot;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -59,19 +59,21 @@ public class TelemetryRepository {
                 .list();
     }
 
-    public Optional<TelemetryRecord> latest(UUID simulationId, StationModule module) {
-        return jdbc.sql("""
+    /** All modules at one tick, so that a caller never mixes readings from different ticks. */
+    public Map<StationModule, TelemetryRecord> atTick(UUID simulationId, long tick) {
+        Map<StationModule, TelemetryRecord> records = new EnumMap<>(StationModule.class);
+        jdbc.sql("""
                 SELECT tick, module, payload::text AS payload FROM telemetry_event
-                WHERE simulation_id = ? AND module = ?
-                ORDER BY tick DESC
-                LIMIT 1
+                WHERE simulation_id = ? AND tick = ?
                 """)
-                .params(simulationId, module.name())
+                .params(simulationId, tick)
                 .query((rs, n) -> new TelemetryRecord(
                         rs.getLong("tick"),
                         StationModule.valueOf(rs.getString("module")),
                         json.readValue(rs.getString("payload"), MAP)))
-                .optional();
+                .list()
+                .forEach(r -> records.put(r.module(), r));
+        return records;
     }
 
     public long count(UUID simulationId) {

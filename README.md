@@ -62,7 +62,7 @@ OXYGEN_LOW          421
 | `GET` | `/api/scenarios` |
 | `POST` | `/api/simulations` — `{"seed": 42, "scenario": "solar-degradation"}` |
 | `GET` | `/api/simulations/{id}` |
-| `POST` | `/api/simulations/{id}/advance?ticks=N` |
+| `POST` | `/api/simulations/{id}/advance?ticks=N` o `?toTick=T` (idempotente) |
 | `GET` | `/api/simulations/{id}/modules` |
 | `GET` | `/api/simulations/{id}/modules/{POWER\|OXYGEN\|COMMS}/readings?fromTick&toTick` |
 | `GET` | `/api/simulations/{id}/incidents?status=OPEN\|RESOLVED` |
