@@ -12,7 +12,7 @@
 
     <artifactId>simulator</artifactId>
     <name>NEXUS-9 Simulator</name>
-    <description>Motor de simulación determinista. Java puro: sin Spring ni base de datos (ADR 0001).</description>
+    <description>Deterministic station simulator</description>
 
     <dependencies>
         <dependency>

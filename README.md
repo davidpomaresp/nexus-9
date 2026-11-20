@@ -6,7 +6,7 @@ No es un panel con números aleatorios: si fallan los paneles solares, baja la g
 
 ## Estado
 
-🚧 **v0.1 "Telemetry Core" en diseño.** Ver [especificación](docs/especificacion-v0.1.md) y [plan de tareas](docs/plan-v0.1.md).
+En desarrollo: v0.1 "Telemetry Core". Ver [especificación](docs/especificacion-v0.1.md) y [plan de tareas](docs/plan-v0.1.md).
 
 ## Problema de ingeniería central
 

@@ -17,7 +17,6 @@ jobs:
           java-version: '21'
           cache: maven
 
-      # Compila, ejecuta los tests unitarios y los de integración (Testcontainers usa el Docker del runner).
       - name: Build y tests
         run: ./mvnw -B verify
 
