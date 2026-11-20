@@ -21,7 +21,7 @@ class WebPanelTest extends PostgresTestBase {
     void servesThePanel() throws Exception {
         mvc.perform(get("/index.html"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("NEXUS-9")));
-        mvc.perform(get("/app.js")).andExpect(status().isOk());
+                .andExpect(content().string(containsString("NEXUS-9")))
+                .andExpect(content().string(containsString("<div id=\"root\">")));
     }
 }
