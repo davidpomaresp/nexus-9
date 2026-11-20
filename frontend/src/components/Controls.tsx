@@ -12,7 +12,10 @@ export function Controls({ station, scenarios }: Props) {
   const [scenario, setScenario] = useState('solar-degradation');
   const [seed, setSeed] = useState('42');
   const [seedError, setSeedError] = useState<string | null>(null);
+  const [chosenSpeed, setSpeed] = useState(5);
   const ready = station.sim !== null;
+  const running = station.sim?.running ?? false;
+  const speed = running ? station.sim!.speed : chosenSpeed;
 
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -46,13 +49,13 @@ export function Controls({ station, scenarios }: Props) {
 
       <div className="run">
         <button type="button" className="primary" disabled={!ready}
-          onClick={() => station.setRunning(!station.running)}>
-          {station.running ? '❚❚ Pausa' : '▶ Ejecutar'}
+          onClick={() => void (running ? station.pause() : station.run(speed))}>
+          {running ? '❚❚ Pausa' : '▶ Ejecutar'}
         </button>
-        <div className="segmented" role="group" aria-label="Ticks por paso">
+        <div className="segmented" role="group" aria-label="Ticks cada 250 ms">
           {SPEEDS.map(s => (
-            <button key={s} type="button" className={station.speed === s ? 'on' : ''}
-              disabled={!ready} onClick={() => station.setSpeed(s)}>×{s}</button>
+            <button key={s} type="button" className={speed === s ? 'on' : ''} disabled={!ready}
+              onClick={() => (running ? void station.run(s) : setSpeed(s))}>×{s}</button>
           ))}
         </div>
         <button type="button" disabled={!ready} onClick={() => void station.advance(10)}>+10</button>
