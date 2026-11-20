@@ -31,6 +31,10 @@ public class IncidentService {
         }
     }
 
+    public int countOpen(UUID simulationId) {
+        return incidents.countOpen(simulationId);
+    }
+
     public List<Incident> find(UUID simulationId, Optional<IncidentStatus> status) {
         return incidents.findBySimulation(simulationId, status);
     }

@@ -1,19 +1,18 @@
 package com.nexus9.backend.api;
 
+import com.nexus9.backend.domain.StationModule;
 import com.nexus9.backend.incident.Incident;
 import com.nexus9.backend.incident.IncidentService;
 import com.nexus9.backend.incident.IncidentStatus;
 import com.nexus9.backend.simulation.Simulation;
 import com.nexus9.backend.simulation.SimulationService;
-import com.nexus9.backend.simulation.StationModule;
+import com.nexus9.backend.simulation.SimulationService.Progress;
 import com.nexus9.backend.telemetry.TelemetryRecord;
 import com.nexus9.backend.telemetry.TelemetryRepository;
 import com.nexus9.simulator.scenario.Scenario;
 import jakarta.validation.Valid;
 import java.net.URI;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
@@ -34,12 +33,14 @@ public class SimulationController {
     private final SimulationService simulations;
     private final IncidentService incidents;
     private final TelemetryRepository telemetry;
+    private final SimulationQueries queries;
 
-    public SimulationController(SimulationService simulations, IncidentService incidents,
-            TelemetryRepository telemetry) {
+    SimulationController(SimulationService simulations, IncidentService incidents, TelemetryRepository telemetry,
+            SimulationQueries queries) {
         this.simulations = simulations;
         this.incidents = incidents;
         this.telemetry = telemetry;
+        this.queries = queries;
     }
 
     @GetMapping("/scenarios")
@@ -56,47 +57,52 @@ public class SimulationController {
 
     @GetMapping("/simulations/{id}")
     public SimulationResponse get(@PathVariable UUID id) {
-        return response(simulations.get(id));
+        return queries.summary(id);
     }
 
+    /** {@code ticks} advances relative to the current tick; {@code toTick} is absolute and idempotent. */
     @PostMapping("/simulations/{id}/advance")
-    public SimulationResponse advance(@PathVariable UUID id, @RequestParam(defaultValue = "1") int ticks) {
-        return response(simulations.advance(id, ticks));
+    public SimulationResponse advance(@PathVariable UUID id, @RequestParam Optional<Integer> ticks,
+            @RequestParam Optional<Long> toTick) {
+        if (ticks.isPresent() && toTick.isPresent()) {
+            throw new IllegalArgumentException("use either ticks or toTick, not both");
+        }
+        Progress progress = toTick.isPresent()
+                ? simulations.advanceTo(id, toTick.get())
+                : simulations.advance(id, ticks.orElse(1));
+        return SimulationResponse.of(progress.simulation(), progress.openIncidents());
     }
 
     @GetMapping("/simulations/{id}/modules")
     public List<ModuleResponse> modules(@PathVariable UUID id) {
-        simulations.get(id);
-        List<Incident> open = incidents.find(id, Optional.of(IncidentStatus.OPEN));
-        return Arrays.stream(StationModule.values())
-                .map(module -> {
-                    Optional<TelemetryRecord> latest = telemetry.latest(id, module);
-                    Map<String, Object> values = latest.map(TelemetryRecord::values).orElse(Map.of());
-                    return new ModuleResponse(module, ModuleStatusResolver.resolve(module, values, open),
-                            latest.map(TelemetryRecord::tick).orElse(null), values);
-                })
-                .toList();
+        return queries.modules(id);
     }
 
+    /** Without {@code fromTick}, returns the last {@value #MAX_READINGS} readings up to {@code toTick}. */
     @GetMapping("/simulations/{id}/modules/{module}/readings")
     public List<TelemetryRecord> readings(@PathVariable UUID id, @PathVariable StationModule module,
-            @RequestParam(defaultValue = "0") long fromTick, @RequestParam Optional<Long> toTick) {
+            @RequestParam Optional<Long> fromTick, @RequestParam Optional<Long> toTick) {
         Simulation sim = simulations.get(id);
-        long to = toTick.orElse(sim.currentTick() - 1);
-        if (fromTick < 0 || to < fromTick || to - fromTick >= MAX_READINGS) {
-            throw new IllegalArgumentException(
-                    "invalid tick range; at most " + MAX_READINGS + " readings per request");
+        if (fromTick.orElse(0L) < 0 || toTick.orElse(0L) < 0) {
+            throw new IllegalArgumentException("ticks must not be negative");
         }
-        return telemetry.find(id, module, fromTick, to);
+        long to = toTick.orElse(sim.currentTick() - 1);
+        long from = fromTick.orElse(Math.max(0, to - MAX_READINGS + 1));
+        if (to < from) {
+            if (fromTick.isPresent() && toTick.isPresent()) {
+                throw new IllegalArgumentException("toTick must not be lower than fromTick");
+            }
+            return List.of();
+        }
+        if (to - from >= MAX_READINGS) {
+            throw new IllegalArgumentException("at most " + MAX_READINGS + " readings per request");
+        }
+        return telemetry.find(id, module, from, to);
     }
 
     @GetMapping("/simulations/{id}/incidents")
     public List<Incident> incidents(@PathVariable UUID id, @RequestParam Optional<IncidentStatus> status) {
         simulations.get(id);
         return incidents.find(id, status);
-    }
-
-    private SimulationResponse response(Simulation sim) {
-        return SimulationResponse.of(sim, incidents.find(sim.id(), Optional.of(IncidentStatus.OPEN)).size());
     }
 }

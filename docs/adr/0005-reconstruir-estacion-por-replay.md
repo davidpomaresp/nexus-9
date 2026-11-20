@@ -22,4 +22,8 @@ Opción 3. La base de datos guarda `seed`, `scenario` y `current_tick`; la estac
 - (+) No hay que persistir ni versionar el estado interno del simulador.
 - (+) Se apoya en el determinismo (ADR 0003), que ya está probado.
 - (−) El coste de reconstruir crece con el número de ticks. Con miles de ticks son milisegundos; si algún día fuera un problema, se añadirían snapshots periódicos.
+- (−) El replay solo es válido si el simulador sigue siendo el mismo. Si un cambio altera la salida para una semilla (por ejemplo, un ajuste de umbrales), reproducir una simulación antigua daría otro estado y la continuación no coincidiría con la telemetría guardada. Por eso:
+  - `Station.MODEL_VERSION` se incrementa con cada cambio que altere la salida.
+  - `simulation.model_version` guarda la versión con la que se creó.
+  - Si no coinciden, el backend se niega a avanzar (409) en vez de mezclar dos modelos. Las simulaciones antiguas siguen siendo consultables.
 - Cada tick se procesa en una transacción con `SELECT ... FOR UPDATE` sobre la simulación, así que dos peticiones simultáneas no pueden avanzar la misma simulación a la vez.

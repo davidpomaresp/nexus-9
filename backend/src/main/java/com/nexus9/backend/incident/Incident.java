@@ -1,6 +1,6 @@
 package com.nexus9.backend.incident;
 
-import com.nexus9.backend.simulation.StationModule;
+import com.nexus9.backend.domain.StationModule;
 import java.util.List;
 import java.util.UUID;
 

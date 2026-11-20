@@ -1,6 +1,8 @@
 package com.nexus9.backend.api;
 
+import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -56,13 +58,55 @@ class SimulationApiTest extends PostgresTestBase {
 
         mvc.perform(get("/api/simulations/{id}/modules", id))
                 .andExpect(jsonPath("$[1].module").value("OXYGEN"))
+                .andExpect(jsonPath("$[*].tick", everyItem(is(599))))
+                .andExpect(jsonPath("$[0].highestPriority").value("CRITICAL"))
                 .andExpect(jsonPath("$[1].status").value("OFFLINE"))
-                .andExpect(jsonPath("$[2].status").value("OFFLINE"));
+                .andExpect(jsonPath("$[1].highestPriority").value("CRITICAL"))
+                .andExpect(jsonPath("$[2].status").value("OFFLINE"))
+                .andExpect(jsonPath("$[2].highestPriority").value("MEDIUM"));
 
         mvc.perform(get("/api/simulations/{id}/incidents", id).param("status", "OPEN"))
                 .andExpect(jsonPath("$", hasSize(5)))
                 .andExpect(jsonPath("$[0].ruleCode").value("GENERATION_DEFICIT"))
                 .andExpect(jsonPath("$[0].affectedModules", hasSize(2)));
+    }
+
+    @Test
+    void advanceToTickIsIdempotent() throws Exception {
+        String id = create(42, "nominal");
+
+        for (int i = 0; i < 2; i++) {
+            mvc.perform(post("/api/simulations/{id}/advance", id).param("toTick", "15"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.currentTick").value(15));
+        }
+        mvc.perform(get("/api/simulations/{id}/modules/POWER/readings", id))
+                .andExpect(jsonPath("$", hasSize(15)));
+    }
+
+    @Test
+    void readingsOfANewSimulationAreEmpty() throws Exception {
+        String id = create(42, "nominal");
+
+        mvc.perform(get("/api/simulations/{id}/modules/POWER/readings", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+        mvc.perform(get("/api/simulations/{id}/modules", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].status").value("NOMINAL"))
+                .andExpect(jsonPath("$[0].tick").doesNotExist());
+    }
+
+    @Test
+    void readingsDefaultToTheLatestWindow() throws Exception {
+        String id = create(42, "nominal");
+        mvc.perform(post("/api/simulations/{id}/advance", id).param("ticks", "5100"));
+
+        mvc.perform(get("/api/simulations/{id}/modules/COMMS/readings", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(5000)))
+                .andExpect(jsonPath("$[0].tick").value(100))
+                .andExpect(jsonPath("$[4999].tick").value(5099));
     }
 
     @Test
@@ -81,7 +125,12 @@ class SimulationApiTest extends PostgresTestBase {
         String id = create(1, "nominal");
         mvc.perform(post("/api/simulations/{id}/advance", id).param("ticks", "0"))
                 .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/simulations/{id}/advance", id).param("ticks", "1").param("toTick", "5"))
+                .andExpect(status().isBadRequest());
         mvc.perform(get("/api/simulations/{id}/modules/FOO/readings", id))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/simulations/{id}/modules/POWER/readings", id)
+                        .param("fromTick", "9").param("toTick", "3"))
                 .andExpect(status().isBadRequest());
     }
 

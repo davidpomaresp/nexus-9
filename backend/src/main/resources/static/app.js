@@ -7,6 +7,10 @@ const MIN_DOMAIN = 600;
 
 let simulation = null;
 let timer = null;
+let busy = false;
+// Bumped on every new simulation and every load, so late responses for an older state are dropped.
+let generation = 0;
+let loadSeq = 0;
 
 const $ = id => document.getElementById(id);
 
@@ -29,27 +33,33 @@ function svgEl(tag, attrs, parent) {
 }
 
 async function load() {
-  const last = simulation.currentTick - 1;
-  const range = `fromTick=${Math.max(0, last - 4999)}&toTick=${Math.max(0, last)}`;
+  const sim = simulation;
+  const gen = generation;
+  const seq = ++loadSeq;
+  // Without fromTick the API returns the last 5000 readings up to toTick.
+  const range = sim.currentTick > 0 ? `?toTick=${sim.currentTick - 1}` : '';
   const [power, oxygen, comms, incidents, modules] = await Promise.all([
-    call('GET', `/simulations/${simulation.id}/modules/POWER/readings?${range}`),
-    call('GET', `/simulations/${simulation.id}/modules/OXYGEN/readings?${range}`),
-    call('GET', `/simulations/${simulation.id}/modules/COMMS/readings?${range}`),
-    call('GET', `/simulations/${simulation.id}/incidents`),
-    call('GET', `/simulations/${simulation.id}/modules`),
+    call('GET', `/simulations/${sim.id}/modules/POWER/readings${range}`),
+    call('GET', `/simulations/${sim.id}/modules/OXYGEN/readings${range}`),
+    call('GET', `/simulations/${sim.id}/modules/COMMS/readings${range}`),
+    call('GET', `/simulations/${sim.id}/incidents`),
+    call('GET', `/simulations/${sim.id}/modules`),
   ]);
-  const rows = power.map((p, i) => ({
+  if (gen !== generation || seq !== loadSeq) return;
+  const byTick = list => new Map(list.map(r => [r.tick, r.values]));
+  const o2 = byTick(oxygen), co = byTick(comms);
+  const rows = power.filter(p => o2.has(p.tick) && co.has(p.tick)).map(p => ({
     tick: p.tick, sunlit: p.values.sunlit, gen: p.values.generationKw, demand: p.values.demandKw,
     served: p.values.servedKw, battery: p.values.batteryPercent,
-    o2: oxygen[i].values.levelPercent, comms: comms[i].values.mode,
+    o2: o2.get(p.tick).levelPercent, comms: co.get(p.tick).mode,
   }));
-  render(rows, incidents, modules);
+  render(sim, rows, incidents, modules);
 }
 
-function render(rows, incidents, modules) {
-  $('meta').innerHTML = `Escenario <b>${simulation.scenario}</b> · semilla <b>${simulation.seed}</b> · ` +
-    `<b>${simulation.openIncidents}</b> incidencias abiertas`;
-  const t = simulation.currentTick;
+function render(sim, rows, incidents, modules) {
+  $('meta').innerHTML = `Escenario <b>${sim.scenario}</b> · semilla <b>${sim.seed}</b> · ` +
+    `<b>${sim.openIncidents}</b> incidencias abiertas`;
+  const t = sim.currentTick;
   $('clock').textContent = `t=${t} · T+${Math.floor(t / 60)}h${String(t % 60).padStart(2, '0')}m`;
   renderCards(modules);
   renderCharts(rows, incidents);
@@ -154,12 +164,20 @@ function renderLog(incidents) {
   ).join('') : '<tr><td colspan="6" class="empty">Sin incidencias.</td></tr>';
 }
 
+// Only one advance at a time, whichever button started it.
 async function advance(ticks) {
+  if (busy || !simulation) return;
+  busy = true;
+  const gen = generation;
   try {
-    simulation = await call('POST', `/simulations/${simulation.id}/advance?ticks=${ticks}`);
+    const next = await call('POST', `/simulations/${simulation.id}/advance?ticks=${ticks}`);
+    if (gen !== generation) return;
+    simulation = next;
     await load();
   } catch (e) {
-    showError(e);
+    if (gen === generation) showError(e);
+  } finally {
+    busy = false;
   }
 }
 
@@ -178,13 +196,7 @@ function stop() {
 $('run').addEventListener('click', () => {
   if (timer) return stop();
   $('run').textContent = '❚❚ Pausa';
-  let busy = false;
-  timer = setInterval(async () => {
-    if (busy) return;
-    busy = true;
-    await advance(5);
-    busy = false;
-  }, 250);
+  timer = setInterval(() => advance(5), 250);
 });
 $('step').addEventListener('click', () => advance(10));
 $('jump').addEventListener('click', () => advance(100));
@@ -193,12 +205,20 @@ $('setup').addEventListener('submit', async e => {
   e.preventDefault();
   stop();
   $('error').hidden = true;
+  const seed = Number($('seed').value);
+  // Larger integers lose precision as JSON numbers in JavaScript.
+  if ($('seed').value.trim() === '' || !Number.isSafeInteger(seed)) {
+    return showError(new Error(`La semilla debe ser un entero entre ${Number.MIN_SAFE_INTEGER} y ${Number.MAX_SAFE_INTEGER}`));
+  }
+  const gen = ++generation;
   try {
-    simulation = await call('POST', '/simulations', { seed: Number($('seed').value), scenario: $('scenario').value });
+    const created = await call('POST', '/simulations', { seed, scenario: $('scenario').value });
+    if (gen !== generation) return;
+    simulation = created;
     for (const id of ['run', 'step', 'jump']) $(id).disabled = false;
     await load();
   } catch (err) {
-    showError(err);
+    if (gen === generation) showError(err);
   }
 });
 

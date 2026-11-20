@@ -1,11 +1,14 @@
 package com.nexus9.simulator;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.nexus9.simulator.comms.CommsMode;
+import com.nexus9.simulator.scenario.PanelFault;
 import com.nexus9.simulator.scenario.Scenario;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 
@@ -49,6 +52,41 @@ class StationTest {
         assertThat(station.advance().tick()).isZero();
         assertThat(station.advance().tick()).isEqualTo(1);
         assertThat(station.nextTick()).isEqualTo(2);
+    }
+
+    @Test
+    void unknownPanelIsRejectedBeforeAnyTick() {
+        Scenario broken = new Scenario("broken", List.of(new PanelFault(3, "SOLAR_PANEL_Z", 0.5)));
+
+        assertThatThrownBy(() -> new Station(1, broken)).isInstanceOf(NoSuchElementException.class);
+    }
+
+    @Test
+    void matchesReferenceSequenceForSeed42() {
+        List<StationSnapshot> run = run(42, Scenario.SOLAR_DEGRADATION, 421);
+
+        StationSnapshot sunlit = run.get(0);
+        assertThat(sunlit.power().sunlit()).isTrue();
+        assertThat(sunlit.power().generationKw()).isEqualTo(11.976354065195697);
+        assertThat(sunlit.power().batteryKwh()).isEqualTo(16.09127256775326);
+
+        StationSnapshot eclipse = run.get(70);
+        assertThat(eclipse.power().sunlit()).isFalse();
+        assertThat(eclipse.power().generationKw()).isZero();
+        assertThat(eclipse.power().batteryKwh()).isEqualTo(18.48333333333332);
+
+        StationSnapshot afterFirstFault = run.get(121);
+        assertThat(afterFirstFault.power().generationKw()).isEqualTo(7.771619011313256);
+        assertThat(afterFirstFault.power().batteryKwh()).isEqualTo(18.824903526716255);
+
+        assertThat(run.get(250).power().batteryKwh()).isEqualTo(11.681817859421207);
+
+        StationSnapshot drained = run.get(420);
+        assertThat(drained.power().servedKw()).isEqualTo(1.829085477871413);
+        assertThat(drained.power().batteryPercent()).isZero();
+        assertThat(drained.oxygen().generatorPowered()).isFalse();
+        assertThat(drained.oxygen().levelPercent()).isEqualTo(95.0);
+        assertThat(drained.comms().mode()).isEqualTo(CommsMode.OFF);
     }
 
     private static List<StationSnapshot> run(long seed, Scenario scenario, int ticks) {

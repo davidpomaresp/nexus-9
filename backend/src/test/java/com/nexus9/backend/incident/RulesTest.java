@@ -30,6 +30,13 @@ class RulesTest {
     }
 
     @Test
+    void generationDeficitResolvesExactlyAtTheThreshold() {
+        // 0.8 * 12 is 9.600000000000001 in floating point
+        assertThat(Rules.GENERATION_DEFICIT.resolveWhen().test(generation(true, 9.6))).isTrue();
+        assertThat(Rules.GENERATION_DEFICIT.resolveWhen().test(generation(true, 9.59))).isFalse();
+    }
+
+    @Test
     void commsDegradedWhenNotInFullMode() {
         assertThat(Rules.COMMS_DEGRADED.openWhen().test(comms(CommsMode.MINIMAL))).isTrue();
         assertThat(Rules.COMMS_DEGRADED.resolveWhen().test(comms(CommsMode.FULL))).isTrue();
