@@ -3,9 +3,14 @@ package com.nexus9.backend.incident;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.nexus9.backend.PostgresTestBase;
+import com.nexus9.backend.domain.StationModule;
 import com.nexus9.backend.simulation.Simulation;
 import com.nexus9.backend.simulation.SimulationService;
-import com.nexus9.backend.simulation.StationModule;
+import com.nexus9.simulator.StationSnapshot;
+import com.nexus9.simulator.comms.CommsMode;
+import com.nexus9.simulator.comms.CommsReading;
+import com.nexus9.simulator.oxygen.OxygenReading;
+import com.nexus9.simulator.power.PowerReading;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -81,6 +86,44 @@ class IncidentServiceTest extends PostgresTestBase {
         assertThat(reopened).isTrue();
         assertThat(incidents.find(sim.id(), Optional.of(IncidentStatus.RESOLVED)))
                 .extracting(Incident::resolvedAtTick).containsExactly(20L);
+    }
+
+    @Test
+    void batteryIncidentsFollowTheirHysteresisCycle() {
+        UUID id = simulations.create(1, "nominal").id();
+
+        incidents.evaluate(id, battery(1, 19));
+        assertThat(state(id)).containsExactly("BATTERY_LOW@1-null:OPEN");
+
+        incidents.evaluate(id, battery(2, 22));
+        assertThat(state(id)).containsExactly("BATTERY_LOW@1-null:OPEN");
+
+        incidents.evaluate(id, battery(3, 26));
+        assertThat(state(id)).containsExactly("BATTERY_LOW@1-3:RESOLVED");
+
+        incidents.evaluate(id, battery(4, 4));
+        assertThat(state(id)).containsExactly(
+                "BATTERY_LOW@1-3:RESOLVED", "BATTERY_CRITICAL@4-null:OPEN", "BATTERY_LOW@4-null:OPEN");
+
+        incidents.evaluate(id, battery(5, 10));
+        assertThat(incidents.countOpen(id)).isEqualTo(2);
+
+        incidents.evaluate(id, battery(6, 10.5));
+        assertThat(state(id)).containsExactly(
+                "BATTERY_LOW@1-3:RESOLVED", "BATTERY_CRITICAL@4-6:RESOLVED", "BATTERY_LOW@4-null:OPEN");
+    }
+
+    private List<String> state(UUID simulationId) {
+        return incidents.find(simulationId, Optional.empty()).stream()
+                .map(i -> i.ruleCode() + "@" + i.openedAtTick() + "-" + i.resolvedAtTick() + ":" + i.status())
+                .toList();
+    }
+
+    private static StationSnapshot battery(long tick, double percent) {
+        return new StationSnapshot(tick,
+                new PowerReading(tick, false, 0, 6.5, 6.5, percent / 5, percent),
+                new OxygenReading(tick, true, 100),
+                new CommsReading(tick, CommsMode.FULL));
     }
 
     private static Incident incident(UUID simulationId, long tick) {

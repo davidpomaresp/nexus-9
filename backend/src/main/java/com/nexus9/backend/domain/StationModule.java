@@ -1,4 +1,4 @@
-package com.nexus9.backend.simulation;
+package com.nexus9.backend.domain;
 
 public enum StationModule {
     POWER,

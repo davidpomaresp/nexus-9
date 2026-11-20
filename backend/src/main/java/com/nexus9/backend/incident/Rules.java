@@ -1,6 +1,7 @@
 package com.nexus9.backend.incident;
 
-import com.nexus9.backend.simulation.StationModule;
+import com.nexus9.backend.domain.StationModule;
+import com.nexus9.simulator.SimulationTime;
 import com.nexus9.simulator.comms.CommsMode;
 import com.nexus9.simulator.power.PowerSystem;
 import java.util.List;
@@ -20,7 +21,8 @@ public final class Rules {
     // Only evaluated in sunlight: in eclipse zero generation is expected.
     public static final Rule GENERATION_DEFICIT = new Rule("GENERATION_DEFICIT", StationModule.POWER, Priority.MEDIUM,
             s -> s.power().sunlit() && s.power().generationKw() < 0.7 * NOMINAL_GENERATION_KW,
-            s -> s.power().sunlit() && s.power().generationKw() >= 0.8 * NOMINAL_GENERATION_KW);
+            s -> s.power().sunlit()
+                    && s.power().generationKw() + SimulationTime.EPSILON_KW >= 0.8 * NOMINAL_GENERATION_KW);
 
     public static final Rule COMMS_DEGRADED = new Rule("COMMS_DEGRADED", StationModule.COMMS, Priority.MEDIUM,
             s -> s.comms().mode() != CommsMode.FULL,

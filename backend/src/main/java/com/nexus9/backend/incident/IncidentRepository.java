@@ -1,6 +1,6 @@
 package com.nexus9.backend.incident;
 
-import com.nexus9.backend.simulation.StationModule;
+import com.nexus9.backend.domain.StationModule;
 import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -54,6 +54,13 @@ public class IncidentRepository {
         jdbc.sql("UPDATE incident SET status = 'RESOLVED', resolved_at_tick = ? WHERE id = ? AND status = 'OPEN'")
                 .params(tick, id)
                 .update();
+    }
+
+    public int countOpen(UUID simulationId) {
+        return jdbc.sql("SELECT count(*) FROM incident WHERE simulation_id = ? AND status = 'OPEN'")
+                .param(simulationId)
+                .query(Integer.class)
+                .single();
     }
 
     public List<Incident> findBySimulation(UUID simulationId, Optional<IncidentStatus> status) {

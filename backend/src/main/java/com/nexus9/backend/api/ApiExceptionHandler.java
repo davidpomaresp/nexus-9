@@ -1,5 +1,6 @@
 package com.nexus9.backend.api;
 
+import com.nexus9.backend.simulation.ModelVersionMismatchException;
 import com.nexus9.backend.simulation.SimulationNotFoundException;
 import java.util.NoSuchElementException;
 import org.springframework.http.HttpStatus;
@@ -13,6 +14,11 @@ public class ApiExceptionHandler {
     @ExceptionHandler(SimulationNotFoundException.class)
     ProblemDetail notFound(SimulationNotFoundException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
+    @ExceptionHandler(ModelVersionMismatchException.class)
+    ProblemDetail conflict(ModelVersionMismatchException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
     }
 
     @ExceptionHandler({IllegalArgumentException.class, NoSuchElementException.class})
