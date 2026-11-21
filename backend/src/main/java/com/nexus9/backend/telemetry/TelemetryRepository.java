@@ -59,6 +59,21 @@ public class TelemetryRepository {
                 .list();
     }
 
+    /** Every module between two ticks, inclusive, ordered by tick and module. */
+    public List<TelemetryRecord> findAll(UUID simulationId, long fromTick, long toTick) {
+        return jdbc.sql("""
+                SELECT tick, module, payload::text AS payload FROM telemetry_event
+                WHERE simulation_id = ? AND tick BETWEEN ? AND ?
+                ORDER BY tick, module
+                """)
+                .params(simulationId, fromTick, toTick)
+                .query((rs, n) -> new TelemetryRecord(
+                        rs.getLong("tick"),
+                        StationModule.valueOf(rs.getString("module")),
+                        json.readValue(rs.getString("payload"), MAP)))
+                .list();
+    }
+
     /** All modules at one tick, so that a caller never mixes readings from different ticks. */
     public Map<StationModule, TelemetryRecord> atTick(UUID simulationId, long tick) {
         Map<StationModule, TelemetryRecord> records = new EnumMap<>(StationModule.class);

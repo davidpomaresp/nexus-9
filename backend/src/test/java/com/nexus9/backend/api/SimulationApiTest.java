@@ -110,6 +110,60 @@ class SimulationApiTest extends PostgresTestBase {
     }
 
     @Test
+    void stateIsReadAtASingleTick() throws Exception {
+        String id = create(42, "solar-degradation");
+        mvc.perform(post("/api/simulations/{id}/advance", id).param("ticks", "130"));
+
+        mvc.perform(get("/api/simulations/{id}/state", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.simulation.currentTick").value(130))
+                .andExpect(jsonPath("$.simulation.openIncidents").value(1))
+                .andExpect(jsonPath("$.modules[*].tick", everyItem(is(129))))
+                .andExpect(jsonPath("$.incidents[0].ruleCode").value("GENERATION_DEFICIT"))
+                .andExpect(jsonPath("$.incidents[0].openedAtTick").value(120))
+                .andExpect(jsonPath("$.readings", hasSize(390)))
+                .andExpect(jsonPath("$.readings[0].tick").value(0))
+                .andExpect(jsonPath("$.readings[389].tick").value(129));
+    }
+
+    @Test
+    void stateReturnsOnlyNewReadings() throws Exception {
+        String id = create(42, "nominal");
+        mvc.perform(post("/api/simulations/{id}/advance", id).param("ticks", "20"));
+
+        mvc.perform(get("/api/simulations/{id}/state", id).param("fromTick", "18"))
+                .andExpect(jsonPath("$.readings", hasSize(6)))
+                .andExpect(jsonPath("$.readings[0].tick").value(18))
+                .andExpect(jsonPath("$.readings[0].module").value("COMMS"));
+        mvc.perform(get("/api/simulations/{id}/state", id).param("fromTick", "20"))
+                .andExpect(jsonPath("$.readings", hasSize(0)))
+                .andExpect(jsonPath("$.modules", hasSize(3)));
+    }
+
+    @Test
+    void stateKeepsTheLatestWindow() throws Exception {
+        String id = create(42, "nominal");
+        mvc.perform(post("/api/simulations/{id}/advance", id).param("ticks", "5100"));
+
+        mvc.perform(get("/api/simulations/{id}/state", id))
+                .andExpect(jsonPath("$.readings", hasSize(15000)))
+                .andExpect(jsonPath("$.readings[0].tick").value(100));
+    }
+
+    @Test
+    void stateOfANewSimulationIsEmpty() throws Exception {
+        String id = create(42, "nominal");
+
+        mvc.perform(get("/api/simulations/{id}/state", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.simulation.currentTick").value(0))
+                .andExpect(jsonPath("$.readings", hasSize(0)))
+                .andExpect(jsonPath("$.incidents", hasSize(0)));
+        mvc.perform(get("/api/simulations/{id}/state", id).param("fromTick", "-1"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void errorsUseProblemDetails() throws Exception {
         mvc.perform(get("/api/simulations/{id}", UUID.randomUUID()))
                 .andExpect(status().isNotFound())
