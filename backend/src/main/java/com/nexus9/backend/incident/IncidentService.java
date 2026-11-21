@@ -24,11 +24,25 @@ public class IncidentService {
             if (open.isEmpty() && rule.openWhen().test(snapshot)) {
                 incidents.insertOpen(new Incident(UUID.randomUUID(), simulationId, rule.module(), rule.code(),
                         rule.priority(), IncidentStatus.OPEN, snapshot.tick(), null,
-                        graph.affectedBy(rule.module())));
+                        graph.affectedBy(rule.module()), null));
             } else if (open.isPresent() && rule.resolveWhen().test(snapshot)) {
                 incidents.resolve(open.get().id(), snapshot.tick());
             }
         }
+    }
+
+    /**
+     * Marks an open incident as acknowledged at the simulation's last completed tick. Acknowledging
+     * it again keeps the first tick, so retries are safe.
+     */
+    public Incident acknowledge(UUID simulationId, UUID incidentId) {
+        incidents.acknowledge(simulationId, incidentId);
+        Incident incident = incidents.find(simulationId, incidentId)
+                .orElseThrow(() -> new IncidentNotFoundException(incidentId));
+        if (incident.acknowledgedAtTick() == null) {
+            throw new IncidentResolvedException(incidentId);
+        }
+        return incident;
     }
 
     public int countOpen(UUID simulationId) {

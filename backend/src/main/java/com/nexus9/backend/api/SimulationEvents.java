@@ -37,8 +37,11 @@ class SimulationEvents {
 
     @EventListener
     void onAdvanced(SimulationAdvanced event) {
-        SimulationResponse state =
-                SimulationResponse.of(event.progress().simulation(), event.progress().openIncidents());
+        publish(SimulationResponse.of(event.progress().simulation(), event.progress().openIncidents()));
+    }
+
+    /** Tells the open panels that something changed even if the tick did not, like an acknowledgement. */
+    void publish(SimulationResponse state) {
         for (SseEmitter emitter : emitters.getOrDefault(state.id(), List.of())) {
             send(emitter, state);
         }

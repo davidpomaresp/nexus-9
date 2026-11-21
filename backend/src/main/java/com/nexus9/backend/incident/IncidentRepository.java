@@ -16,7 +16,7 @@ public class IncidentRepository {
 
     private static final String COLUMNS = """
             id, simulation_id, module, rule_code, priority, status,
-            opened_at_tick, resolved_at_tick, affected_modules
+            opened_at_tick, resolved_at_tick, affected_modules, acknowledged_at_tick
             """;
 
     private final JdbcClient jdbc;
@@ -56,6 +56,24 @@ public class IncidentRepository {
                 .update();
     }
 
+    /** Only open incidents not acknowledged yet are changed; returns whether this call changed it. */
+    public boolean acknowledge(UUID simulationId, UUID id) {
+        return jdbc.sql("""
+                UPDATE incident SET acknowledged_at_tick =
+                    (SELECT current_tick - 1 FROM simulation WHERE simulation.id = incident.simulation_id)
+                WHERE id = ? AND simulation_id = ? AND status = 'OPEN' AND acknowledged_at_tick IS NULL
+                """)
+                .params(id, simulationId)
+                .update() == 1;
+    }
+
+    public Optional<Incident> find(UUID simulationId, UUID id) {
+        return jdbc.sql("SELECT " + COLUMNS + " FROM incident WHERE id = ? AND simulation_id = ?")
+                .params(id, simulationId)
+                .query(this::map)
+                .optional();
+    }
+
     public int countOpen(UUID simulationId) {
         return jdbc.sql("SELECT count(*) FROM incident WHERE simulation_id = ? AND status = 'OPEN'")
                 .param(simulationId)
@@ -85,7 +103,8 @@ public class IncidentRepository {
                 IncidentStatus.valueOf(rs.getString("status")),
                 rs.getLong("opened_at_tick"),
                 rs.getObject("resolved_at_tick", Long.class),
-                modules(rs.getArray("affected_modules")));
+                modules(rs.getArray("affected_modules")),
+                rs.getObject("acknowledged_at_tick", Long.class));
     }
 
     private static List<StationModule> modules(Array array) throws SQLException {

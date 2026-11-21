@@ -137,4 +137,12 @@ public class SimulationController {
         simulations.get(id);
         return incidents.find(id, status);
     }
+
+    @PostMapping("/simulations/{id}/incidents/{incidentId}/acknowledge")
+    public Incident acknowledge(@PathVariable UUID id, @PathVariable UUID incidentId) {
+        simulations.get(id);
+        Incident incident = incidents.acknowledge(id, incidentId);
+        events.publish(queries.summary(id));
+        return incident;
+    }
 }
