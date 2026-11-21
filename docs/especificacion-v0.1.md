@@ -1,7 +1,7 @@
 # Especificación — NEXUS-9 v0.1 "Telemetry Core"
 
-> Estado: **borrador**, pendiente de revisión.
-> Las decisiones de fondo están razonadas en [`docs/adr/`](adr/).
+> Implementada en la v0.1. Lo que se añadió después está marcado con (v0.2).
+> El porqué de las decisiones está en [`docs/adr/`](adr/).
 
 ## 1. Objetivo
 

@@ -5,7 +5,7 @@
 
 ## Contexto
 
-Queremos reproducir cadenas de averías y escribir tests que no fallen al azar. Un simulador que use la hora real y `Math.random()` no es reproducible.
+Quiero poder repetir una cadena de averías exactamente igual y tener tests que no fallen una vez de cada diez. Con la hora real y `Math.random()` eso es imposible.
 
 ## Opciones
 
@@ -18,10 +18,10 @@ Opción 2:
 
 - 1 tick = 60 s de tiempo de estación. La hora real no entra en el simulador.
 - Todo el ruido sale de un generador con semilla explícita.
-- La API avanza la simulación con `POST /advance?ticks=N`. Un modo "tiempo real" se podrá añadir encima más adelante, llamando a ese mismo método periódicamente.
+- La API avanza la simulación con `POST /advance?ticks=N`. El modo en tiempo real que llegó en la v0.2 ([ADR 0006](0006-reloj-en-servidor-y-sse.md)) no cambia esto: solo llama a ese mismo método cada 250 ms.
 
 ## Consecuencias
 
 - (+) Misma semilla + mismo escenario ⇒ mismas lecturas. Tests deterministas y demos repetibles.
 - (+) Se pueden simular horas de estación en milisegundos.
-- (−) Hay que tener cuidado con fuentes ocultas de no determinismo (orden de iteración de `HashMap`, hora del sistema). Se usarán colecciones con orden definido.
+- (−) Hay que vigilar las fuentes de no determinismo que no se ven a simple vista, como el orden de un `HashMap` o la hora del sistema. Por eso uso siempre colecciones con orden definido.

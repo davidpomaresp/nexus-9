@@ -1,25 +1,25 @@
 # NEXUS-9
 
-Software de supervisión para una estación espacial ficticia. Un simulador determinista genera la telemetría de energía, oxígeno y comunicaciones; el backend la guarda, aplica reglas y abre incidencias con prioridad.
+Un centro de control para una estación espacial que no existe. Hay un simulador que genera la telemetría de energía, oxígeno y comunicaciones, y un backend que la guarda, vigila con reglas y abre incidencias cuando algo va mal.
 
-Las averías no son números aleatorios: si fallan los paneles solares baja la generación, la batería se descarga, la estación recorta consumo y al final el generador de oxígeno se queda sin energía.
+Quería que las averías tuvieran causa y efecto, no números aleatorios en un dashboard. Si fallan los paneles solares, baja la generación, la batería se va vaciando, la estación recorta consumo para aguantar y al final el generador de oxígeno se queda sin energía. Todo eso sale del modelo, no está programado a mano.
 
 ![CI](https://github.com/davidpomaresp/nexus-9/actions/workflows/ci.yml/badge.svg)
 
-## Qué hace (v0.1)
+## Qué hace
 
-- Simulación por ticks (1 tick = 60 s) con órbita luz/sombra, paneles, batería, oxígeno y comunicaciones.
-- Reparto de energía por prioridad y ahorro de comunicaciones cuando baja la batería.
-- Escenarios con averías programadas:
-  - `nominal`: sin averías.
-  - `solar-degradation`: fallan los paneles y la avería se propaga hasta el oxígeno.
-  - `oxygen-leak`: una fuga supera al generador de O₂ hasta que se repara en el tick 300.
-  - `solar-storm`: una tormenta deja los paneles al 40 % entre los ticks 180 y 420; la batería baja, las comunicaciones ahorran y la estación se recupera.
-- Telemetría e incidencias en PostgreSQL.
-- 5 reglas con histéresis y módulos afectados según un grafo de dependencias.
-- API REST y panel de control en React en `http://localhost:8080`: esquema de la estación con dependencias, órbita, gráficas de telemetría e incidencias.
+- Simula la estación tick a tick (1 tick = 1 minuto): órbita con día y noche, paneles, batería, oxígeno y comunicaciones.
+- Reparte la energía por prioridad y pone las comunicaciones en ahorro cuando baja la batería.
+- Trae cuatro escenarios:
+  - `nominal`: no pasa nada (sirve para comprobar que no salta ninguna alarma).
+  - `solar-degradation`: fallan los paneles y la avería acaba llegando al oxígeno.
+  - `oxygen-leak`: una fuga gana al generador de O₂ hasta que se repara en el tick 300.
+  - `solar-storm`: una tormenta deja los paneles al 40 % entre los ticks 180 y 420; la estación aguanta y se recupera.
+- Guarda telemetría e incidencias en PostgreSQL.
+- Tiene 5 reglas con histéresis, y cada incidencia sabe a qué otros módulos puede afectar según un grafo de dependencias.
+- La simulación corre en el servidor y el panel (React) se actualiza en directo con Server-Sent Events.
 
-Lo interesante está en la consistencia: aunque se reinicie el backend o lleguen eventos duplicados, el historial es el mismo y no se duplican incidencias. Lo garantiza la base de datos (claves únicas e índice único parcial), no comprobaciones en el código. Ver [ADR 0002](docs/adr/0002-idempotencia-en-base-de-datos.md) y [ADR 0005](docs/adr/0005-reconstruir-estacion-por-replay.md).
+La parte que más me interesaba es la consistencia. Si el backend se reinicia a mitad de escenario o llegan eventos repetidos, el historial tiene que quedar igual y no puede haber incidencias duplicadas. Eso no lo garantizan comprobaciones en Java, sino la propia base de datos (claves únicas y un índice único parcial). Lo explico en el [ADR 0002](docs/adr/0002-idempotencia-en-base-de-datos.md) y el [ADR 0005](docs/adr/0005-reconstruir-estacion-por-replay.md).
 
 ## Arquitectura
 
@@ -33,11 +33,11 @@ flowchart LR
     INC --> DB
 ```
 
-Monolito modular con dos módulos Maven: `simulator` (sin dependencias de Spring) y `backend` (Spring Boot). El panel está en `frontend/` (React + Vite + TypeScript); Maven lo compila y lo empaqueta dentro del jar, así que se despliega un único artefacto.
+Es un monolito modular con dos módulos Maven: `simulator`, en Java sin Spring, y `backend`, con Spring Boot. El panel vive en `frontend/` (React + Vite + TypeScript) y Maven lo compila y lo mete dentro del jar, así que al final se despliega una sola cosa.
 
 ## Cómo ejecutarlo
 
-Requisitos: Java 21 y Docker.
+Necesitas Java 21 y Docker.
 
 ```bash
 ./mvnw verify                  # tests unitarios y de integración (PostgreSQL con Testcontainers)
@@ -45,13 +45,13 @@ docker compose up --build      # PostgreSQL + backend; panel en http://localhost
 ./scripts/demo.sh              # ejecuta el escenario de avería de paneles
 ```
 
-Para trabajar en el panel con recarga en caliente (con el backend arrancado en el 8080):
+Si vas a tocar el panel, con el backend arrancado en el 8080 puedes usar Vite con recarga en caliente:
 
 ```bash
 cd frontend && npm install && npm run dev   # http://localhost:5173
 ```
 
-Salida de la demo:
+La demo crea una simulación de `solar-degradation` con semilla 42 y saca esto:
 
 ```
 == currentTick 150   POWER DEGRADED   OXYGEN NOMINAL   COMMS NOMINAL
@@ -85,11 +85,12 @@ Java 21 · Spring Boot 4 · PostgreSQL 17 · React 19 · TypeScript · Vite · S
 
 ## Documentación
 
-- [Especificación v0.1](docs/especificacion-v0.1.md)
-- [Plan de tareas](docs/plan-v0.1.md)
+- [Especificación](docs/especificacion-v0.1.md)
+- [Plan de la v0.1](docs/plan-v0.1.md)
 - [Decisiones de arquitectura (ADR)](docs/adr/)
+- [Cómo está desplegado](docs/despliegue.md)
 
-## Próximos pasos
+## Lo siguiente
 
-- Simulador como proceso separado que envía eventos por HTTP (reintentos, eventos desordenados).
-- Operadores con login y roles, y ciclo de incidencias `OPEN → ACKNOWLEDGED → RESOLVED`.
+- Sacar el simulador a un proceso aparte que mande los eventos por HTTP, para enfrentarme a reintentos y eventos desordenados de verdad.
+- Operadores con login y roles.

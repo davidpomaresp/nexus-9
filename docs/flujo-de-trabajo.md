@@ -1,7 +1,7 @@
-# Flujo de trabajo
+# Cómo trabajo en el proyecto
 
-- **GitHub es la fuente de verdad** de código y documentación.
-- **Tareas pequeñas**: una rama y un pull request por tarea del [plan](plan-v0.1.md).
-- **Cada PR incluye** tests y las decisiones técnicas no obvias, enlazando al ADR cuando aplica.
-- **Decisiones de arquitectura** en `docs/adr/`, numeradas, con contexto, opciones, decisión y consecuencias. Ninguna decisión se acepta sin argumentos y alternativas.
-- **Producto funcional antes que tecnologías**: cada dependencia nueva necesita una razón documentada.
+- Todo vive en GitHub: código y documentación.
+- Una rama y un pull request por tarea, y que sean pequeños.
+- Cada PR lleva sus tests y explica lo que no sea obvio, enlazando al ADR si lo hay.
+- Las decisiones de arquitectura van en `docs/adr/`, numeradas y con contexto, opciones y consecuencias. Si no puedo dar argumentos y alternativas, no es una decisión, es una corazonada.
+- Primero que funcione, luego las tecnologías: cada dependencia nueva tiene que tener un motivo.

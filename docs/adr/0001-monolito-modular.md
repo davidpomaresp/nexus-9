@@ -5,7 +5,7 @@
 
 ## Contexto
 
-NEXUS-9 tiene varias responsabilidades (simulación, ingesta de telemetría, reglas, estado, API) y un único desarrollador. La v0.1 debe ejecutarse en local y probarse con facilidad.
+NEXUS-9 hace varias cosas (simular, guardar telemetría, evaluar reglas, mantener el estado, exponer una API) y lo desarrollo yo solo. Para la v0.1 quería algo que arrancara en local con un comando y que fuera fácil de probar.
 
 ## Opciones
 
@@ -18,11 +18,11 @@ NEXUS-9 tiene varias responsabilidades (simulación, ingesta de telemetría, reg
 Opción 3. Proyecto Maven multimódulo:
 
 - `simulator`: Java puro, sin dependencias de Spring ni de base de datos.
-- `backend`: Spring Boot, con paquetes `telemetry`, `rules`, `station`, `api`. Depende de `simulator`; nunca al revés.
+- `backend`: Spring Boot, con los paquetes `simulation`, `telemetry`, `incident`, `api` y `domain`. Depende de `simulator`, nunca al revés.
 
 ## Consecuencias
 
 - (+) Un solo despliegue, transacciones locales, depuración sencilla.
 - (+) El simulador se puede extraer a un proceso propio en v0.2 sin reescribirlo.
-- (−) La disciplina de límites depende de nosotros; se puede reforzar más adelante con tests de arquitectura (ArchUnit) si hace falta.
-- Microservicios descartados: añaden red, despliegues y consistencia distribuida sin aportar nada a los objetivos de la v0.1.
+- (−) Que los límites se respeten depende de mí. Si algún día empiezan a mezclarse, se pueden vigilar con tests de arquitectura (ArchUnit).
+- Descarté los microservicios porque traen red, varios despliegues y consistencia distribuida, y nada de eso me ayudaba con lo que quería demostrar en la v0.1.
