@@ -11,6 +11,7 @@ public final class OxygenSystem {
     static final double DEPLETION_PER_TICK = 0.25;
 
     private double levelPercent;
+    private double leakPerTick = 0;
 
     public OxygenSystem() {
         this(100.0);
@@ -29,7 +30,15 @@ public final class OxygenSystem {
         } else {
             levelPercent = Math.max(0.0, levelPercent - DEPLETION_PER_TICK);
         }
+        levelPercent = Math.max(0.0, levelPercent - leakPerTick);
         return new OxygenReading(tick, powered, levelPercent);
+    }
+
+    public void setLeakPerTick(double percentPerTick) {
+        if (!(percentPerTick >= 0 && percentPerTick <= 100)) {
+            throw new IllegalArgumentException("leak must be in [0, 100]");
+        }
+        this.leakPerTick = percentPerTick;
     }
 
     public double levelPercent() {
