@@ -1,5 +1,7 @@
 package com.nexus9.backend.simulation;
 
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -54,6 +56,20 @@ public class SimulationRepository {
         jdbc.sql("UPDATE simulation SET running = ?, speed = ? WHERE id = ?")
                 .params(running, speed, id)
                 .update();
+    }
+
+    /** Deletes simulations created before {@code cutoff} with their telemetry and incidents. */
+    public List<UUID> deleteCreatedBefore(Instant cutoff) {
+        List<UUID> ids = jdbc.sql("SELECT id FROM simulation WHERE created_at < ?")
+                .param(Timestamp.from(cutoff))
+                .query(UUID.class)
+                .list();
+        for (UUID id : ids) {
+            jdbc.sql("DELETE FROM telemetry_event WHERE simulation_id = ?").param(id).update();
+            jdbc.sql("DELETE FROM incident WHERE simulation_id = ?").param(id).update();
+            jdbc.sql("DELETE FROM simulation WHERE id = ?").param(id).update();
+        }
+        return ids;
     }
 
     public void updateCurrentTick(UUID id, long currentTick) {

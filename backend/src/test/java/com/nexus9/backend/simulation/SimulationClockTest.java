@@ -20,6 +20,9 @@ class SimulationClockTest extends PostgresTestBase {
     @Autowired
     JdbcClient jdbc;
 
+    @Autowired
+    SimulationRepository repository;
+
     @Test
     void runningSimulationsAdvanceUntilPaused() throws Exception {
         UUID id = service.create(42, "nominal").id();
@@ -47,6 +50,22 @@ class SimulationClockTest extends PostgresTestBase {
         waitUntil(() -> !service.get(id).running());
 
         assertThat(service.get(id).currentTick()).isZero();
+    }
+
+    @Test
+    void stopsAtTheTickLimit() throws Exception {
+        UUID id = service.create(42, "nominal").id();
+        SimulationClock limited = new SimulationClock(repository, service, 12);
+
+        service.run(id, 5);
+        service.pause(id);
+        jdbc.sql("UPDATE simulation SET running = true WHERE id = ?").param(id).update();
+        for (int i = 0; i < 4; i++) {
+            limited.tick();
+        }
+
+        assertThat(service.get(id).currentTick()).isEqualTo(12);
+        assertThat(service.get(id).running()).isFalse();
     }
 
     @Test

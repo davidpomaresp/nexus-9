@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: nexus-9
+    runtime: docker
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: NEXUS_DB_URL
+        sync: false
+      - key: NEXUS_DB_USER
+        sync: false
+      - key: NEXUS_DB_PASSWORD
+        sync: false
+      - key: NEXUS_DB_POOL_SIZE
+        value: "5"
+      - key: NEXUS_CLOCK_MAXTICK
+        value: "3000"
+      - key: NEXUS_RETENTION
+        value: 24h
+      - key: JAVA_TOOL_OPTIONS
+        value: -XX:MaxRAMPercentage=75 -XX:+UseSerialGC
