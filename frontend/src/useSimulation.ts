@@ -149,5 +149,17 @@ export function useSimulation() {
   const run = useCallback((speed: number) => command(id => api.run(id, speed)), [command]);
   const pause = useCallback(() => command(id => api.pause(id)), [command]);
 
-  return { ...state, error, live, open, create, advance, run, pause };
+  const acknowledge = useCallback(async (incident: string) => {
+    const current = stateRef.current.sim;
+    if (!current) return;
+    setError(null);
+    try {
+      await api.acknowledge(current.id, incident);
+      await refresh();
+    } catch (e) {
+      fail(e);
+    }
+  }, [refresh, fail]);
+
+  return { ...state, error, live, open, create, advance, run, pause, acknowledge };
 }

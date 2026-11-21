@@ -13,9 +13,10 @@ interface Props {
   currentTick: number;
   focused: string | null;
   onFocus: (incident: Incident) => void;
+  onAcknowledge: (incident: Incident) => void;
 }
 
-export function IncidentLog({ incidents, currentTick, focused, onFocus }: Props) {
+export function IncidentLog({ incidents, currentTick, focused, onFocus, onAcknowledge }: Props) {
   if (!incidents.length) return <p className="muted">Sin incidencias.</p>;
   const sorted = [...incidents].sort((a, b) =>
     (a.status === b.status ? 0 : a.status === 'OPEN' ? -1 : 1) || b.openedAtTick - a.openedAtTick);
@@ -24,7 +25,7 @@ export function IncidentLog({ incidents, currentTick, focused, onFocus }: Props)
       {sorted.map(i => {
         const end = i.resolvedAtTick ?? currentTick;
         return (
-          <li key={i.id}>
+          <li key={i.id} className="incident-row">
             <button type="button" aria-pressed={i.id === focused} onClick={() => onFocus(i)}
               className={`incident p-${i.priority} ${i.status === 'OPEN' ? 'open' : 'resolved'}`}>
             <span className="prio">{i.priority}</span>
@@ -40,6 +41,12 @@ export function IncidentLog({ incidents, currentTick, focused, onFocus }: Props)
               </span>
             </div>
             </button>
+            {i.status === 'OPEN' && i.acknowledgedAtTick === null ? (
+              <button type="button" className="ack" onClick={() => onAcknowledge(i)}
+                aria-label={`Reconocer ${i.ruleCode}`}>Reconocer</button>
+            ) : i.acknowledgedAtTick !== null ? (
+              <span className="acked">reconocida t={i.acknowledgedAtTick}</span>
+            ) : null}
           </li>
         );
       })}
