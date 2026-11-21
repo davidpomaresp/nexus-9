@@ -37,4 +37,18 @@ class OxygenSystemTest {
 
         assertThat(r.levelPercent()).isZero();
     }
+
+    @Test
+    void leakDrainsEvenWithThePowerOnUntilRepaired() {
+        OxygenSystem oxygen = new OxygenSystem();
+
+        oxygen.setLeakPerTick(0.75);
+        oxygen.step(0, true);
+        oxygen.step(1, true);
+        assertThat(oxygen.levelPercent()).isEqualTo(99.0);
+
+        oxygen.setLeakPerTick(0);
+        oxygen.step(2, true);
+        assertThat(oxygen.levelPercent()).isEqualTo(99.5);
+    }
 }

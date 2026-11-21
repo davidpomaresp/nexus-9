@@ -49,7 +49,7 @@ public class SimulationController {
 
     @GetMapping("/scenarios")
     public List<String> scenarios() {
-        return List.of(Scenario.NOMINAL.name(), Scenario.SOLAR_DEGRADATION.name());
+        return Scenario.BUILT_IN.stream().map(Scenario::name).toList();
     }
 
     @PostMapping("/simulations")

@@ -10,7 +10,11 @@ Las averías no son números aleatorios: si fallan los paneles solares baja la g
 
 - Simulación por ticks (1 tick = 60 s) con órbita luz/sombra, paneles, batería, oxígeno y comunicaciones.
 - Reparto de energía por prioridad y ahorro de comunicaciones cuando baja la batería.
-- Escenarios con averías programadas (`nominal`, `solar-degradation`).
+- Escenarios con averías programadas:
+  - `nominal`: sin averías.
+  - `solar-degradation`: fallan los paneles y la avería se propaga hasta el oxígeno.
+  - `oxygen-leak`: una fuga supera al generador de O₂ hasta que se repara en el tick 300.
+  - `solar-storm`: una tormenta deja los paneles al 40 % entre los ticks 180 y 420; la batería baja, las comunicaciones ahorran y la estación se recupera.
 - Telemetría e incidencias en PostgreSQL.
 - 5 reglas con histéresis y módulos afectados según un grafo de dependencias.
 - API REST y panel de control en React en `http://localhost:8080`: esquema de la estación con dependencias, órbita, gráficas de telemetría e incidencias.

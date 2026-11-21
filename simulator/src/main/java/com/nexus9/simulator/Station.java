@@ -5,6 +5,8 @@ import com.nexus9.simulator.oxygen.OxygenReading;
 import com.nexus9.simulator.oxygen.OxygenSystem;
 import com.nexus9.simulator.power.PowerReading;
 import com.nexus9.simulator.power.PowerSystem;
+import com.nexus9.simulator.scenario.Fault;
+import com.nexus9.simulator.scenario.OxygenLeak;
 import com.nexus9.simulator.scenario.PanelFault;
 import com.nexus9.simulator.scenario.Scenario;
 
@@ -30,16 +32,21 @@ public final class Station {
         this.seed = seed;
         this.scenario = scenario;
         this.random = new RandomSource(seed);
-        for (PanelFault fault : scenario.faults()) {
-            power.panel(fault.panelId());
+        for (Fault fault : scenario.faults()) {
+            if (fault instanceof PanelFault panelFault) {
+                power.panel(panelFault.panelId());
+            }
         }
     }
 
     public StationSnapshot advance() {
         long tick = nextTick;
 
-        for (PanelFault fault : scenario.faultsAt(tick)) {
-            power.panel(fault.panelId()).setEfficiency(fault.efficiency());
+        for (Fault fault : scenario.faultsAt(tick)) {
+            switch (fault) {
+                case PanelFault f -> power.panel(f.panelId()).setEfficiency(f.efficiency());
+                case OxygenLeak f -> oxygen.setLeakPerTick(f.percentPerTick());
+            }
         }
 
         double generationKw = power.generate(tick, random);

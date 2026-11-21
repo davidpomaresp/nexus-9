@@ -1,6 +1,6 @@
 package com.nexus9.simulator.scenario;
 
-public record PanelFault(long tick, String panelId, double efficiency) {
+public record PanelFault(long tick, String panelId, double efficiency) implements Fault {
 
     public PanelFault {
         if (tick < 0) {
