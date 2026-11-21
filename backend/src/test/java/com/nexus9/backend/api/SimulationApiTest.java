@@ -164,6 +164,23 @@ class SimulationApiTest extends PostgresTestBase {
     }
 
     @Test
+    void acknowledgeAnIncident() throws Exception {
+        String id = create(42, "solar-degradation");
+        mvc.perform(post("/api/simulations/{id}/advance", id).param("ticks", "130"));
+        String body = mvc.perform(get("/api/simulations/{id}/incidents", id))
+                .andReturn().getResponse().getContentAsString();
+        String incident = JsonPath.read(body, "$[0].id");
+
+        mvc.perform(post("/api/simulations/{id}/incidents/{incident}/acknowledge", id, incident))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.acknowledgedAtTick").value(129));
+        mvc.perform(get("/api/simulations/{id}/state", id))
+                .andExpect(jsonPath("$.incidents[0].acknowledgedAtTick").value(129));
+        mvc.perform(post("/api/simulations/{id}/incidents/{incident}/acknowledge", id, UUID.randomUUID()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void errorsUseProblemDetails() throws Exception {
         mvc.perform(get("/api/simulations/{id}", UUID.randomUUID()))
                 .andExpect(status().isNotFound())

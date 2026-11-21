@@ -13,5 +13,6 @@ public record Incident(
         IncidentStatus status,
         long openedAtTick,
         Long resolvedAtTick,
-        List<StationModule> affectedModules) {
+        List<StationModule> affectedModules,
+        Long acknowledgedAtTick) {
 }

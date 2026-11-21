@@ -1,5 +1,7 @@
 package com.nexus9.backend.api;
 
+import com.nexus9.backend.incident.IncidentNotFoundException;
+import com.nexus9.backend.incident.IncidentResolvedException;
 import com.nexus9.backend.simulation.ModelVersionMismatchException;
 import com.nexus9.backend.simulation.SimulationNotFoundException;
 import java.util.NoSuchElementException;
@@ -11,13 +13,13 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
-    @ExceptionHandler(SimulationNotFoundException.class)
-    ProblemDetail notFound(SimulationNotFoundException e) {
+    @ExceptionHandler({SimulationNotFoundException.class, IncidentNotFoundException.class})
+    ProblemDetail notFound(RuntimeException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
     }
 
-    @ExceptionHandler(ModelVersionMismatchException.class)
-    ProblemDetail conflict(ModelVersionMismatchException e) {
+    @ExceptionHandler({ModelVersionMismatchException.class, IncidentResolvedException.class})
+    ProblemDetail conflict(RuntimeException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
     }
 
