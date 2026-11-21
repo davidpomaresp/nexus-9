@@ -57,11 +57,11 @@ class SimulationClockTest extends PostgresTestBase {
         UUID id = service.create(42, "nominal").id();
         SimulationClock limited = new SimulationClock(repository, service, 12);
 
+        // Stepping a paused simulation directly keeps the application's own clock out of the test.
         service.run(id, 5);
         service.pause(id);
-        jdbc.sql("UPDATE simulation SET running = true WHERE id = ?").param(id).update();
         for (int i = 0; i < 4; i++) {
-            limited.tick();
+            limited.step(repository.findById(id).orElseThrow());
         }
 
         assertThat(service.get(id).currentTick()).isEqualTo(12);

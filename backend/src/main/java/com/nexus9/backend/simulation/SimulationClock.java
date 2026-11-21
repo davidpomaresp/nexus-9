@@ -30,17 +30,21 @@ public class SimulationClock {
     @Scheduled(fixedDelayString = "${nexus.clock.interval:250ms}")
     public void tick() {
         for (Simulation sim : simulations.findRunning()) {
-            try {
-                long ticks = maxTick > 0 ? Math.min(sim.speed(), maxTick - sim.currentTick()) : sim.speed();
-                if (ticks <= 0) {
-                    service.pause(sim.id());
-                    continue;
-                }
-                service.advance(sim.id(), (int) ticks);
-            } catch (RuntimeException e) {
-                log.warn("Stopping simulation {}: {}", sim.id(), e.getMessage());
+            step(sim);
+        }
+    }
+
+    void step(Simulation sim) {
+        try {
+            long ticks = maxTick > 0 ? Math.min(sim.speed(), maxTick - sim.currentTick()) : sim.speed();
+            if (ticks <= 0) {
                 service.pause(sim.id());
+                return;
             }
+            service.advance(sim.id(), (int) ticks);
+        } catch (RuntimeException e) {
+            log.warn("Stopping simulation {}: {}", sim.id(), e.getMessage());
+            service.pause(sim.id());
         }
     }
 }
