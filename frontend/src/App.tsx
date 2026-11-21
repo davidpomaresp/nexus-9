@@ -145,7 +145,7 @@ export function App() {
             <section className="panel incidents">
               <h2>Incidencias</h2>
               <IncidentLog incidents={incidents} currentTick={sim.currentTick} focused={focusId}
-                onFocus={focusIncident} />
+                onFocus={focusIncident} onAcknowledge={i => void station.acknowledge(i.id)} />
             </section>
           </main>
         </>
