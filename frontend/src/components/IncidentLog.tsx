@@ -8,7 +8,14 @@ const RULE_LABEL: Record<string, string> = {
   OXYGEN_LOW: 'Oxígeno por debajo del 95 %',
 };
 
-export function IncidentLog({ incidents, currentTick }: { incidents: Incident[]; currentTick: number }) {
+interface Props {
+  incidents: Incident[];
+  currentTick: number;
+  focused: string | null;
+  onFocus: (incident: Incident) => void;
+}
+
+export function IncidentLog({ incidents, currentTick, focused, onFocus }: Props) {
   if (!incidents.length) return <p className="muted">Sin incidencias.</p>;
   const sorted = [...incidents].sort((a, b) =>
     (a.status === b.status ? 0 : a.status === 'OPEN' ? -1 : 1) || b.openedAtTick - a.openedAtTick);
@@ -17,7 +24,9 @@ export function IncidentLog({ incidents, currentTick }: { incidents: Incident[];
       {sorted.map(i => {
         const end = i.resolvedAtTick ?? currentTick;
         return (
-          <li key={i.id} className={`incident p-${i.priority} ${i.status === 'OPEN' ? 'open' : 'resolved'}`}>
+          <li key={i.id}>
+            <button type="button" aria-pressed={i.id === focused} onClick={() => onFocus(i)}
+              className={`incident p-${i.priority} ${i.status === 'OPEN' ? 'open' : 'resolved'}`}>
             <span className="prio">{i.priority}</span>
             <div className="what">
               <strong>{i.ruleCode}</strong>
@@ -30,6 +39,7 @@ export function IncidentLog({ incidents, currentTick }: { incidents: Incident[];
                   : `resuelta en t=${i.resolvedAtTick} (${end - i.openedAtTick} min)`}
               </span>
             </div>
+            </button>
           </li>
         );
       })}
