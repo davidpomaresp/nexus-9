@@ -75,6 +75,13 @@ tick 200: SOLAR_PANEL_B → eficiencia 0.0
 
 Escenario de referencia para la demo y los tests: **`solar-degradation`** (el de arriba).
 
+Escenarios añadidos en la v0.2 (las averías son de tipo `PanelFault` u `OxygenLeak`):
+
+| Escenario | Averías | Qué se ve |
+|---|---|---|
+| `oxygen-leak` | fuga de 0,75 %/tick en t=150, reparada en t=300 | `OXYGEN_LOW` se abre aunque el generador funciona y se resuelve tras la reparación |
+| `solar-storm` | paneles A y B al 40 % entre t=180 y t=420 | `GENERATION_DEFICIT`, `COMMS_DEGRADED` y `BATTERY_LOW` se abren y se resuelven al pasar la tormenta |
+
 ## 4. Estados
 
 - Módulo: `NOMINAL`, `DEGRADED`, `CRITICAL`, `OFFLINE`. Se calcula al consultar, con esta precedencia:

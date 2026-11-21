@@ -62,6 +62,40 @@ class IncidentServiceTest extends PostgresTestBase {
     }
 
     @Test
+    void oxygenLeakOpensAndResolvesOxygenLow() {
+        Simulation sim = simulations.create(42, "oxygen-leak");
+        simulations.advance(sim.id(), 600);
+
+        List<Incident> all = incidents.find(sim.id(), Optional.empty());
+
+        assertThat(all).extracting(Incident::ruleCode).containsExactly("OXYGEN_LOW");
+        Incident leak = all.getFirst();
+        assertThat(leak.openedAtTick()).isBetween(150L, 200L);
+        assertThat(leak.resolvedAtTick()).isGreaterThan(300L);
+        assertThat(leak.status()).isEqualTo(IncidentStatus.RESOLVED);
+    }
+
+    @Test
+    void solarStormIncidentsAreResolvedAfterTheStorm() {
+        Simulation sim = simulations.create(42, "solar-storm");
+        simulations.advance(sim.id(), 900);
+
+        List<Incident> all = incidents.find(sim.id(), Optional.empty());
+
+        assertThat(all).extracting(Incident::ruleCode)
+                .contains("GENERATION_DEFICIT", "COMMS_DEGRADED", "BATTERY_LOW")
+                .doesNotContain("BATTERY_CRITICAL", "OXYGEN_LOW");
+        assertThat(all).filteredOn(i -> i.ruleCode().equals("GENERATION_DEFICIT"))
+                .singleElement()
+                .satisfies(i -> {
+                    // The storm starts at 180 in eclipse; the deficit shows once the station is back in the sun.
+                    assertThat(i.openedAtTick()).isEqualTo(184);
+                    assertThat(i.resolvedAtTick()).isGreaterThanOrEqualTo(420L);
+                });
+        assertThat(incidents.find(sim.id(), Optional.of(IncidentStatus.OPEN))).isEmpty();
+    }
+
+    @Test
     void databaseRejectsASecondOpenIncidentForTheSameRule() {
         Simulation sim = simulations.create(1, "nominal");
 

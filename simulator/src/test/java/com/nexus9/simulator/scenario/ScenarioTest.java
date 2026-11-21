@@ -22,7 +22,7 @@ class ScenarioTest {
                 new PanelFault(5, "B", 0.0),
                 new PanelFault(10, "B", 0.2)));
 
-        assertThat(scenario.faultsAt(10)).extracting(PanelFault::panelId).containsExactly("A", "B");
+        assertThat(scenario.faultsAt(10)).extracting(f -> ((PanelFault) f).panelId()).containsExactly("A", "B");
         assertThat(scenario.faultsAt(7)).isEmpty();
         assertThat(scenario.faults().getFirst().tick()).isEqualTo(5);
     }

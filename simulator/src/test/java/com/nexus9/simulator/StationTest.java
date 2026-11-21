@@ -55,6 +55,29 @@ class StationTest {
     }
 
     @Test
+    void oxygenLeakDrainsAndRecoversAfterTheRepair() {
+        List<StationSnapshot> run = run(42, Scenario.OXYGEN_LEAK, 600);
+
+        assertThat(run.get(149).oxygen().levelPercent()).isEqualTo(100.0);
+        assertThat(run.get(299).oxygen().levelPercent()).isLessThan(70);
+        assertThat(run).allMatch(s -> s.oxygen().generatorPowered());
+        assertThat(run.getLast().oxygen().levelPercent()).isEqualTo(100.0);
+    }
+
+    @Test
+    void solarStormDrainsTheBatteryAndTheStationRecovers() {
+        List<StationSnapshot> run = run(42, Scenario.SOLAR_STORM, 900);
+
+        double lowest = run.stream().mapToDouble(s -> s.power().batteryPercent()).min().orElseThrow();
+        long commsOff = firstTick(run, s -> s.comms().mode() == CommsMode.OFF);
+
+        assertThat(lowest).isBetween(5.0, 15.0);
+        assertThat(commsOff).isBetween(420L, 480L);
+        assertThat(run).allMatch(s -> s.oxygen().generatorPowered());
+        assertThat(run.getLast().comms().mode()).isEqualTo(CommsMode.FULL);
+    }
+
+    @Test
     void unknownPanelIsRejectedBeforeAnyTick() {
         Scenario broken = new Scenario("broken", List.of(new PanelFault(3, "SOLAR_PANEL_Z", 0.5)));
 
