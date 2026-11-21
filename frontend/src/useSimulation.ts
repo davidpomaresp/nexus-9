@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, history, type Incident, type Module, type Row, type Simulation } from './api';
+import { api, toRows, type Incident, type Module, type Row, type Simulation } from './api';
 
 export interface SimulationState {
   sim: Simulation | null;
@@ -9,6 +9,7 @@ export interface SimulationState {
 }
 
 const EMPTY: SimulationState = { sim: null, rows: [], modules: [], incidents: [] };
+const MAX_ROWS = 5000;
 
 /**
  * The server owns the clock: this hook only starts and pauses it, and listens to the simulation's
@@ -19,16 +20,24 @@ export function useSimulation() {
   const [error, setError] = useState<string | null>(null);
   const [live, setLive] = useState(false);
 
-  const simRef = useRef<Simulation | null>(null);
+  const stateRef = useRef<SimulationState>(EMPTY);
   const busy = useRef(false);
   const refreshing = useRef(false);
   const pending = useRef(false);
-  // Bumped on every new simulation, so late responses for the previous one are dropped.
+  // Bumped every time another simulation is opened, so late responses for the previous one are dropped.
   const generation = useRef(0);
 
   const fail = useCallback((e: unknown) => setError(e instanceof Error ? e.message : String(e)), []);
 
-  /** Reloads history, modules and incidents; calls made while one is running are merged into one more. */
+  const publish = useCallback((next: SimulationState) => {
+    stateRef.current = next;
+    setState(next);
+  }, []);
+
+  /**
+   * Loads the state of the current simulation, asking only for the readings not loaded yet.
+   * Calls made while one is running are merged into one more.
+   */
   const refresh = useCallback(async () => {
     if (refreshing.current) {
       pending.current = true;
@@ -38,33 +47,38 @@ export function useSimulation() {
     try {
       do {
         pending.current = false;
-        const sim = simRef.current;
-        if (!sim) return;
+        const current = stateRef.current;
+        if (!current.sim) return;
         const gen = generation.current;
-        const [rows, modules, incidents] = await Promise.all([
-          history(sim), api.modules(sim.id), api.incidents(sim.id),
-        ]);
+        const from = current.rows.length ? current.rows[current.rows.length - 1].tick + 1 : 0;
+        const next = await api.state(current.sim.id, from);
         if (gen !== generation.current) return;
-        setState({ sim, rows, modules, incidents });
+        const latest = stateRef.current;
+        // A response can be older than an event already applied; never go back in time.
+        if (latest.sim && next.simulation.currentTick < latest.sim.currentTick) continue;
+        const fresh = toRows(next.readings);
+        // If the server skipped ticks (more than one window behind), start the history again.
+        const keep = fresh.length && fresh[0].tick !== from ? [] : latest.rows;
+        const rows = [...keep.filter(r => r.tick < (fresh[0]?.tick ?? Infinity)), ...fresh].slice(-MAX_ROWS);
+        publish({ sim: next.simulation, rows, modules: next.modules, incidents: next.incidents });
       } while (pending.current);
     } catch (e) {
       fail(e);
     } finally {
       refreshing.current = false;
     }
-  }, [fail]);
+  }, [fail, publish]);
 
   const accept = useCallback((sim: Simulation) => {
-    const current = simRef.current;
+    const current = stateRef.current.sim;
     if (!current || current.id !== sim.id) return;
     // Events and responses can arrive out of order; never go back in time.
     if (sim.currentTick < current.currentTick) return;
-    simRef.current = sim;
+    publish({ ...stateRef.current, sim });
     void refresh();
-  }, [refresh]);
+  }, [publish, refresh]);
 
-  const sim = state.sim;
-  const simId = sim?.id;
+  const simId = state.sim?.id;
 
   useEffect(() => {
     if (!simId) return;
@@ -78,24 +92,47 @@ export function useSimulation() {
     };
   }, [simId, accept]);
 
+  /** Shows an existing simulation, for example one opened from its URL. */
+  const open = useCallback(async (id: string) => {
+    setError(null);
+    const gen = ++generation.current;
+    try {
+      const loaded = await api.state(id, 0);
+      if (gen !== generation.current) return;
+      publish({
+        sim: loaded.simulation,
+        rows: toRows(loaded.readings).slice(-MAX_ROWS),
+        modules: loaded.modules,
+        incidents: loaded.incidents,
+      });
+      return loaded.simulation;
+    } catch (e) {
+      if (gen === generation.current) {
+        publish(EMPTY);
+        fail(e);
+      }
+    }
+  }, [publish, fail]);
+
   const create = useCallback(async (seed: number, scenario: string) => {
     setError(null);
     const gen = ++generation.current;
     try {
-      if (simRef.current?.running) await api.pause(simRef.current.id);
+      const previous = stateRef.current.sim;
+      if (previous?.running) await api.pause(previous.id);
       const created = await api.create(seed, scenario);
       if (gen !== generation.current) return;
-      simRef.current = created;
-      setState({ ...EMPTY, sim: created });
+      publish({ ...EMPTY, sim: created });
       await refresh();
+      return created;
     } catch (e) {
       if (gen === generation.current) fail(e);
     }
-  }, [refresh, fail]);
+  }, [publish, refresh, fail]);
 
   /** Runs one request at a time against the current simulation. */
   const command = useCallback(async (call: (id: string) => Promise<Simulation>) => {
-    const current = simRef.current;
+    const current = stateRef.current.sim;
     if (busy.current || !current) return;
     busy.current = true;
     setError(null);
@@ -112,5 +149,5 @@ export function useSimulation() {
   const run = useCallback((speed: number) => command(id => api.run(id, speed)), [command]);
   const pause = useCallback(() => command(id => api.pause(id)), [command]);
 
-  return { ...state, error, live, create, advance, run, pause };
+  return { ...state, error, live, open, create, advance, run, pause };
 }
