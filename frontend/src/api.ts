@@ -69,7 +69,11 @@ export interface Row {
   comms: CommsMode;
 }
 
-export class ApiError extends Error {}
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
+}
 
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch('/api' + path, {
@@ -78,7 +82,7 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json();
-  if (!res.ok) throw new ApiError(data.detail ?? res.statusText);
+  if (!res.ok) throw new ApiError(data.detail ?? res.statusText, res.status);
   return data as T;
 }
 

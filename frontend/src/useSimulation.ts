@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, toRows, type Incident, type Module, type Row, type Simulation } from './api';
+import { api, ApiError, toRows, type Incident, type Module, type Row, type Simulation } from './api';
 
 export interface SimulationState {
   sim: Simulation | null;
@@ -36,7 +36,8 @@ export function useSimulation() {
 
   /**
    * Loads the state of the current simulation, asking only for the readings not loaded yet.
-   * Calls made while one is running are merged into one more.
+   * Calls made while one is running are merged into one more, which still runs if the
+   * running one fails or is dropped.
    */
   const refresh = useCallback(async () => {
     if (refreshing.current) {
@@ -48,22 +49,29 @@ export function useSimulation() {
       do {
         pending.current = false;
         const current = stateRef.current;
-        if (!current.sim) return;
+        if (!current.sim) break;
+        const id = current.sim.id;
         const gen = generation.current;
         const from = current.rows.length ? current.rows[current.rows.length - 1].tick + 1 : 0;
-        const next = await api.state(current.sim.id, from);
-        if (gen !== generation.current) return;
-        const latest = stateRef.current;
-        // A response can be older than an event already applied; never go back in time.
-        if (latest.sim && next.simulation.currentTick < latest.sim.currentTick) continue;
-        const fresh = toRows(next.readings);
-        // If the server skipped ticks (more than one window behind), start the history again.
-        const keep = fresh.length && fresh[0].tick !== from ? [] : latest.rows;
-        const rows = [...keep.filter(r => r.tick < (fresh[0]?.tick ?? Infinity)), ...fresh].slice(-MAX_ROWS);
-        publish({ sim: next.simulation, rows, modules: next.modules, incidents: next.incidents });
+        try {
+          const next = await api.state(id, from);
+          const latest = stateRef.current;
+          // Another simulation was opened meanwhile: drop this answer and load that one instead.
+          if (gen !== generation.current || latest.sim?.id !== id) {
+            pending.current = true;
+            continue;
+          }
+          // A response can be older than an event already applied; never go back in time.
+          if (next.simulation.currentTick < latest.sim.currentTick) continue;
+          const fresh = toRows(next.readings);
+          // If the server skipped ticks (more than one window behind), start the history again.
+          const keep = fresh.length && fresh[0].tick !== from ? [] : latest.rows;
+          const rows = [...keep.filter(r => r.tick < (fresh[0]?.tick ?? Infinity)), ...fresh].slice(-MAX_ROWS);
+          publish({ sim: next.simulation, rows, modules: next.modules, incidents: next.incidents });
+        } catch (e) {
+          if (gen === generation.current) fail(e);
+        }
       } while (pending.current);
-    } catch (e) {
-      fail(e);
     } finally {
       refreshing.current = false;
     }
@@ -109,7 +117,9 @@ export function useSimulation() {
     } catch (e) {
       if (gen === generation.current) {
         publish(EMPTY);
-        fail(e);
+        // Old simulations are deleted after a while, so a shared link can stop working.
+        if (e instanceof ApiError && e.status === 404) setError('Esta simulación no existe o ya ha caducado');
+        else fail(e);
       }
     }
   }, [publish, fail]);
