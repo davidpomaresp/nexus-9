@@ -8,6 +8,8 @@ Quería que las averías tuvieran causa y efecto, no números aleatorios en un d
 
 **Pruébalo:** https://nexus-9-aftv.onrender.com. Está en el plan gratuito de Render, así que si nadie lo ha abierto en un rato tarda alrededor de un minuto en despertar.
 
+![Panel de NEXUS-9 con el escenario solar-degradation en el tick 600](docs/img/panel.png)
+
 ## Qué hace
 
 - Simula la estación tick a tick (1 tick = 1 minuto): órbita con día y noche, paneles, batería, oxígeno y comunicaciones.
