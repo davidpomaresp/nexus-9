@@ -167,15 +167,26 @@ export function useSimulation() {
   const run = useCallback((speed: number) => command(id => api.run(id, speed)), [command]);
   const pause = useCallback(() => command(id => api.pause(id)), [command]);
 
+  /** Resolves to true if the incident ended up acknowledged. */
   const acknowledge = useCallback(async (incident: string) => {
     const current = stateRef.current.sim;
-    if (!current) return;
+    if (!current) return false;
+    const gen = generation.current;
     setError(null);
     try {
       await api.acknowledge(current.id, incident);
       await refresh();
+      return gen === generation.current;
     } catch (e) {
-      fail(e);
+      // the answer is for a simulation that is no longer on screen
+      if (gen !== generation.current) return false;
+      if (e instanceof ApiError && e.status === 409) {
+        setError('Esa incidencia ya se había resuelto');
+        await refresh();
+      } else {
+        fail(e);
+      }
+      return false;
     }
   }, [refresh, fail]);
 

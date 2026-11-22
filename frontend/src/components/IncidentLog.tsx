@@ -1,3 +1,4 @@
+import { useRef, useState, type MouseEvent } from 'react';
 import type { Incident } from '../api';
 
 const RULE_LABEL: Record<string, string> = {
@@ -13,20 +14,34 @@ interface Props {
   currentTick: number;
   focused: string | null;
   onFocus: (incident: Incident) => void;
-  onAcknowledge: (incident: Incident) => void;
+  onAcknowledge: (incident: Incident) => Promise<boolean>;
 }
 
 export function IncidentLog({ incidents, currentTick, focused, onFocus, onAcknowledge }: Props) {
+  const rows = useRef(new Map<string, HTMLButtonElement>());
+  const [said, setSaid] = useState('');
+
+  async function acknowledge(i: Incident, e: MouseEvent<HTMLButtonElement>) {
+    const hadFocus = document.activeElement === e.currentTarget;
+    if (!(await onAcknowledge(i))) return;
+    setSaid(`${i.ruleCode} reconocida`);
+    // the button disappears, so keep the keyboard on the same incident
+    if (hadFocus) rows.current.get(i.id)?.focus();
+  }
+
   if (!incidents.length) return <p className="muted">Sin incidencias.</p>;
   const sorted = [...incidents].sort((a, b) =>
     (a.status === b.status ? 0 : a.status === 'OPEN' ? -1 : 1) || b.openedAtTick - a.openedAtTick);
   return (
+    <>
+    <p className="sr-only" aria-live="polite">{said}</p>
     <ol className="incident-list">
       {sorted.map(i => {
         const end = i.resolvedAtTick ?? currentTick;
         return (
           <li key={i.id} className="incident-row">
             <button type="button" aria-pressed={i.id === focused} onClick={() => onFocus(i)}
+              ref={el => { if (el) rows.current.set(i.id, el); else rows.current.delete(i.id); }}
               className={`incident p-${i.priority} ${i.status === 'OPEN' ? 'open' : 'resolved'}`}>
             <span className="prio">{i.priority}</span>
             <div className="what">
@@ -42,7 +57,7 @@ export function IncidentLog({ incidents, currentTick, focused, onFocus, onAcknow
             </div>
             </button>
             {i.status === 'OPEN' && i.acknowledgedAtTick === null ? (
-              <button type="button" className="ack" onClick={() => onAcknowledge(i)}
+              <button type="button" className="ack" onClick={e => void acknowledge(i, e)}
                 aria-label={`Reconocer ${i.ruleCode}`}>Reconocer</button>
             ) : i.acknowledgedAtTick !== null ? (
               <span className="acked">reconocida t={i.acknowledgedAtTick}</span>
@@ -51,5 +66,6 @@ export function IncidentLog({ incidents, currentTick, focused, onFocus, onAcknow
         );
       })}
     </ol>
+    </>
   );
 }

@@ -266,3 +266,4 @@ button.incident[aria-pressed="true"] { border-color: var(--accent); border-left-
   margin-right: 5px; background: var(--off); vertical-align: 1px;
 }
 .live.on::before { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
