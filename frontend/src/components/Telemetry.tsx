@@ -5,7 +5,6 @@ import { BATTERY_THRESHOLDS, OXYGEN_LOW, missionTime } from '../station';
 interface Props {
   rows: Row[];
   incidents: Incident[];
-  /** Tick pinned by the operator, or null to follow the live data. */
   selected: number | null;
   focusedIncident: string | null;
   onSelect: (tick: number | null) => void;
@@ -55,7 +54,7 @@ export function Telemetry({ rows, incidents, selected, focusedIncident, onSelect
   }
 
   const pointer = {
-    // A mouse previews on hover and pins on click; a finger pins on tap.
+    // mouse: hover previews, click pins. touch: tap pins
     onPointerMove: (e: PointerEvent<SVGSVGElement>) => e.pointerType === 'mouse' && setHover(tickAt(e)),
     onPointerLeave: () => setHover(null),
     onPointerDown: (e: PointerEvent<SVGSVGElement>) => {
@@ -205,7 +204,7 @@ function Chart(p: ChartProps) {
 function Readout({ row, tick, live }: { row: Row | null; tick: number | null; live: Row | null }) {
   const shown = row ?? live;
   return (
-    // Only announce readings the operator chose, not every live tick.
+    // don't announce every live tick
     <div className="readout" aria-live={row ? 'polite' : 'off'}>
       {shown ? (
         <>

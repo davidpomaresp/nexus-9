@@ -4,7 +4,6 @@ import type { Incident, Module, ModuleName } from '../api';
 interface Props {
   modules: Module[];
   incidents: Incident[];
-  /** Incident chosen in the log: its module and the ones it can affect are outlined. */
   focus: Incident | null;
 }
 
@@ -74,7 +73,7 @@ function Node({ module, name, title, role, children }: {
   module: Module | undefined; name: ModuleName; title: string; role: Role; children: ReactNode;
 }) {
   const { x, y, w, h } = BOX[name];
-  // Before the first tick there are no readings yet, so the status is unknown rather than nominal.
+  // no readings before the first tick
   const status = module?.tick == null ? null : module.status;
   return (
     <g transform={`translate(${x} ${y})`} className={`node s-${status ?? 'NONE'}${role ? ` role-${role}` : ''}`}>

@@ -13,7 +13,7 @@ const SEVERITY: ModuleStatus[] = ['NOMINAL', 'DEGRADED', 'CRITICAL', 'OFFLINE'];
 export function App() {
   const station = useSimulation();
   const [scenarios, setScenarios] = useState<string[]>([]);
-  // A pinned tick means the operator is looking at the past; null follows the live data.
+  // null = following live
   const [selectedTick, setSelectedTick] = useState<number | null>(null);
   const [focusId, setFocusId] = useState<string | null>(null);
   const { sim, modules, rows, incidents, open } = station;
@@ -23,7 +23,6 @@ export function App() {
     api.scenarios().then(setScenarios).catch(() => setScenarios([]));
   }, []);
 
-  // The URL says which simulation is on screen, so it can be bookmarked and shared.
   useEffect(() => {
     const load = () => {
       const id = simulationIdFromPath(window.location.pathname);

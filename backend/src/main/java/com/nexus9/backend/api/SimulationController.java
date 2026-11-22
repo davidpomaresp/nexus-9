@@ -102,10 +102,6 @@ public class SimulationController {
         return queries.modules(id);
     }
 
-    /**
-     * Everything the panel shows, read at a single tick. {@code fromTick} asks only for the readings
-     * the client does not have yet.
-     */
     @GetMapping("/simulations/{id}/state")
     public StateResponse state(@PathVariable UUID id, @RequestParam(defaultValue = "0") long fromTick) {
         if (fromTick < 0) {

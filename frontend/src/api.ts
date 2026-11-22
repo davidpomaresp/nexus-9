@@ -102,7 +102,7 @@ export const api = {
   state: (id: string, fromTick: number) => call<StationState>('GET', `/simulations/${id}/state?fromTick=${fromTick}`),
 };
 
-/** Joins the readings of the three modules into one row per tick; ticks missing a module are skipped. */
+// One row per tick. Ticks missing a module are skipped.
 export function toRows(readings: StationState['readings']): Row[] {
   const byTick = new Map<number, Partial<PowerValues & OxygenValues & CommsValues>>();
   for (const r of readings) byTick.set(r.tick, { ...byTick.get(r.tick), ...r.values });
@@ -123,7 +123,6 @@ export function toRows(readings: StationState['readings']): Row[] {
   return rows.sort((a, b) => a.tick - b.tick);
 }
 
-/** Path of a simulation in the panel, and the reverse. */
 export const simulationPath = (id: string) => `/simulations/${id}`;
 export function simulationIdFromPath(path: string): string | null {
   return /^\/simulations\/([0-9a-f-]{36})\/?$/i.exec(path)?.[1] ?? null;

@@ -59,7 +59,6 @@ public class TelemetryRepository {
                 .list();
     }
 
-    /** Every module between two ticks, inclusive, ordered by tick and module. */
     public List<TelemetryRecord> findAll(UUID simulationId, long fromTick, long toTick) {
         return jdbc.sql("""
                 SELECT tick, module, payload::text AS payload FROM telemetry_event

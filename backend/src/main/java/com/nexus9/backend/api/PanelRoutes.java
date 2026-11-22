@@ -3,7 +3,7 @@ package com.nexus9.backend.api;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
-/** Lets the browser open the panel's own URLs directly; the panel reads the path itself. */
+/** So /simulations/{id} links work when opened directly. */
 @Controller
 class PanelRoutes {
 

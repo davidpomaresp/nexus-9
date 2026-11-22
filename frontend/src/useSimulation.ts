@@ -24,7 +24,7 @@ export function useSimulation() {
   const busy = useRef(false);
   const refreshing = useRef(false);
   const pending = useRef(false);
-  // Bumped every time another simulation is opened, so late responses for the previous one are dropped.
+  // changes when another simulation is opened
   const generation = useRef(0);
 
   const fail = useCallback((e: unknown) => setError(e instanceof Error ? e.message : String(e)), []);
@@ -34,11 +34,7 @@ export function useSimulation() {
     setState(next);
   }, []);
 
-  /**
-   * Loads the state of the current simulation, asking only for the readings not loaded yet.
-   * Calls made while one is running are merged into one more, which still runs if the
-   * running one fails or is dropped.
-   */
+  // Only asks for readings we don't have yet. Calls made while one is running are queued as one more.
   const refresh = useCallback(async () => {
     if (refreshing.current) {
       pending.current = true;
@@ -56,15 +52,15 @@ export function useSimulation() {
         try {
           const next = await api.state(id, from);
           const latest = stateRef.current;
-          // Another simulation was opened meanwhile: drop this answer and load that one instead.
+          // another simulation was opened meanwhile, load that one instead
           if (gen !== generation.current || latest.sim?.id !== id) {
             pending.current = true;
             continue;
           }
-          // A response can be older than an event already applied; never go back in time.
+          // older than what we already have
           if (next.simulation.currentTick < latest.sim.currentTick) continue;
           const fresh = toRows(next.readings);
-          // If the server skipped ticks (more than one window behind), start the history again.
+          // we were more than a window behind, start over
           const keep = fresh.length && fresh[0].tick !== from ? [] : latest.rows;
           const rows = [...keep.filter(r => r.tick < (fresh[0]?.tick ?? Infinity)), ...fresh].slice(-MAX_ROWS);
           publish({ sim: next.simulation, rows, modules: next.modules, incidents: next.incidents });
@@ -100,7 +96,6 @@ export function useSimulation() {
     };
   }, [simId, accept]);
 
-  /** Shows an existing simulation, for example one opened from its URL. */
   const open = useCallback(async (id: string) => {
     setError(null);
     const gen = ++generation.current;
@@ -117,7 +112,6 @@ export function useSimulation() {
     } catch (e) {
       if (gen === generation.current) {
         publish(EMPTY);
-        // Old simulations are deleted after a while, so a shared link can stop working.
         if (e instanceof ApiError && e.status === 404) setError('Esta simulación no existe o ya ha caducado');
         else fail(e);
       }

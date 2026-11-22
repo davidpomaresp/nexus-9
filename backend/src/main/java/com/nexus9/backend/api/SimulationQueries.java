@@ -52,10 +52,7 @@ class SimulationQueries {
         return snapshot.execute(status -> modulesAt(simulations.get(id)));
     }
 
-    /**
-     * Summary, modules, incidents and the readings from {@code fromTick} on, all at the same tick.
-     * At most {@code maxTicks} ticks of readings are returned, the most recent ones.
-     */
+    /** Everything the panel needs from one snapshot, with at most maxTicks ticks of readings. */
     StateResponse state(UUID id, long fromTick, int maxTicks) {
         return snapshot.execute(status -> {
             Simulation sim = simulations.get(id);
