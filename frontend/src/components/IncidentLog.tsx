@@ -22,11 +22,15 @@ export function IncidentLog({ incidents, currentTick, focused, onFocus, onAcknow
   const [said, setSaid] = useState('');
 
   async function acknowledge(i: Incident, e: MouseEvent<HTMLButtonElement>) {
-    const hadFocus = document.activeElement === e.currentTarget;
+    const button = e.currentTarget;
+    const hadFocus = document.activeElement === button;
+    // blur only fires if the user moves on; removing the button doesn't fire it
+    let movedOn = false;
+    button.addEventListener('blur', () => { movedOn = true; }, { once: true });
     if (!(await onAcknowledge(i))) return;
     setSaid(`${i.ruleCode} reconocida`);
-    // the button disappears, so keep the keyboard on the same incident
-    if (hadFocus) rows.current.get(i.id)?.focus();
+    // the button disappears, so put the keyboard back on the same incident
+    if (hadFocus && !movedOn) rows.current.get(i.id)?.focus();
   }
 
   if (!incidents.length) return <p className="muted">Sin incidencias.</p>;

@@ -176,10 +176,10 @@ export function useSimulation() {
     try {
       await api.acknowledge(current.id, incident);
       await refresh();
-      return gen === generation.current;
+      return still(gen, current.id);
     } catch (e) {
       // the answer is for a simulation that is no longer on screen
-      if (gen !== generation.current) return false;
+      if (!still(gen, current.id)) return false;
       if (e instanceof ApiError && e.status === 409) {
         setError('Esa incidencia ya se había resuelto');
         await refresh();
@@ -188,7 +188,7 @@ export function useSimulation() {
       }
       return false;
     }
-  }, [refresh, fail]);
+  }, [refresh, fail, still]);
 
   return { ...state, error, live, open, close, create, advance, run, pause, acknowledge };
 }
