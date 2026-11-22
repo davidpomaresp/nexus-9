@@ -8,7 +8,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * The simulation the public demo opens with, so a first visit already shows a failure chain instead
- * of an empty panel. It is created on first use and again after the retention job deletes it.
+ * of an empty panel. It is created on first use and is read-only: everyone sees the same failure chain,
+ * and trying things out means creating your own simulation.
  */
 @Component
 @ConditionalOnProperty("nexus.demo.scenario")
@@ -34,13 +35,13 @@ public class DemoSimulation {
     public UUID id() {
         UUID id = simulations.findFeaturedId().orElseGet(this::create);
         // Idempotent: does nothing once the simulation is past the starting tick.
-        service.advanceTo(id, startTick);
+        service.prepareExample(id, startTick);
         return id;
     }
 
     private UUID create() {
         simulations.insertFeaturedIfMissing(new Simulation(UUID.randomUUID(), seed, scenario, 0,
-                Station.MODEL_VERSION, false, SimulationService.DEFAULT_SPEED));
+                Station.MODEL_VERSION, false, SimulationService.DEFAULT_SPEED, true));
         // Another request may have won the insert; either way there is exactly one now.
         return simulations.findFeaturedId().orElseThrow();
     }

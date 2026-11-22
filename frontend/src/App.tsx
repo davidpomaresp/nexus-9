@@ -73,6 +73,7 @@ export function App() {
   }, [firstTick]);
 
   const phase = sim ? orbitPhase(sim.currentTick) : null;
+  const failureStart = sim?.featured ? incidents.find(i => i.ruleCode === 'GENERATION_DEFICIT') : undefined;
   const focus = incidents.find(i => i.id === focusId) ?? null;
   const reviewing = selectedTick !== null;
   const overall = modules.reduce<ModuleStatus>(
@@ -145,6 +146,13 @@ export function App() {
                 </span>
                 <button type="button" onClick={backToLive}>Volver al directo</button>
               </>
+            ) : failureStart ? (
+              <span>
+                <b>Misión de ejemplo</b> · pulsa{' '}
+                <button type="button" className="inline" onClick={() => focusIncident(failureStart)}>
+                  GENERATION_DEFICIT</button>{' '}
+                para ver dónde empieza el fallo y sigue la caída de la batería hasta OXYGEN_LOW
+              </span>
             ) : (
               <span><b>Siguiendo el directo</b> · elige una incidencia o un punto de las gráficas para revisarlo</span>
             )}
@@ -175,7 +183,7 @@ export function App() {
             <section className="panel incidents">
               <h2>Caution &amp; warning <small>{incidents.filter(i => i.status === 'OPEN' && i.acknowledgedAtTick === null).length} sin reconocer</small></h2>
               <IncidentLog incidents={incidents} currentTick={sim.currentTick} focused={focusId}
-                onFocus={focusIncident} onAcknowledge={i => station.acknowledge(i.id)} />
+                onFocus={focusIncident} onAcknowledge={i => station.acknowledge(i.id)} readOnly={sim.featured} />
             </section>
           </main>
         </>

@@ -53,7 +53,7 @@ public class SimulationService {
     public Simulation create(long seed, String scenarioName) {
         Scenario.byName(scenarioName);
         Simulation simulation = new Simulation(UUID.randomUUID(), seed, scenarioName, 0, Station.MODEL_VERSION,
-                false, DEFAULT_SPEED);
+                false, DEFAULT_SPEED, false);
         if (!tx.execute(status -> simulations.insertIfFewerThan(simulation, limits.maxSimulations()))) {
             throw new DemoLimitException("this demo keeps at most " + limits.maxSimulations()
                     + " simulations; try again later");
@@ -65,6 +65,15 @@ public class SimulationService {
         return simulations.findById(id).orElseThrow(() -> new SimulationNotFoundException(id));
     }
 
+    /** Returns the simulation, or fails if it is the shared example. */
+    public Simulation getEditable(UUID id) {
+        Simulation simulation = get(id);
+        if (simulation.featured()) {
+            throw new ReadOnlySimulationException(id);
+        }
+        return simulation;
+    }
+
     /**
      * Advances {@code ticks} ticks from wherever the simulation is. Not idempotent: a retried request
      * advances again. Each tick commits on its own, so a failure can leave part of the request applied.
@@ -73,7 +82,7 @@ public class SimulationService {
         if (ticks < 1 || ticks > MAX_TICKS_PER_REQUEST) {
             throw new IllegalArgumentException("ticks must be between 1 and " + MAX_TICKS_PER_REQUEST);
         }
-        checkTickLimit(get(id).currentTick() + ticks);
+        checkTickLimit(getEditable(id).currentTick() + ticks);
         Progress progress = null;
         for (int i = 0; i < ticks; i++) {
             progress = tx.execute(status -> step(id, Long.MAX_VALUE));
@@ -90,7 +99,17 @@ public class SimulationService {
         if (targetTick < 0) {
             throw new IllegalArgumentException("toTick must not be negative");
         }
-        if (targetTick - get(id).currentTick() > MAX_TICKS_PER_REQUEST) {
+        return advanceTo(getEditable(id), targetTick);
+    }
+
+    /** Brings the shared example up to {@code targetTick}; does nothing once it is there. */
+    Progress prepareExample(UUID id, long targetTick) {
+        return advanceTo(get(id), targetTick);
+    }
+
+    private Progress advanceTo(Simulation simulation, long targetTick) {
+        UUID id = simulation.id();
+        if (targetTick - simulation.currentTick() > MAX_TICKS_PER_REQUEST) {
             throw new IllegalArgumentException("at most " + MAX_TICKS_PER_REQUEST + " ticks per request");
         }
         checkTickLimit(targetTick);
@@ -114,14 +133,13 @@ public class SimulationService {
             int alreadyDone = done;
             ClockTick tick = tx.execute(status -> {
                 Simulation sim = simulations.findByIdForUpdate(id).orElse(null);
-                if (sim == null || !sim.running() || alreadyDone >= sim.speed()) {
+                if (sim == null || !sim.running() || sim.featured() || alreadyDone >= sim.speed()) {
                     return null;
                 }
                 if (atTickLimit(sim.currentTick())) {
                     simulations.updateClock(id, false, sim.speed());
-                    Simulation paused = new Simulation(sim.id(), sim.seed(), sim.scenario(), sim.currentTick(),
-                            sim.modelVersion(), false, sim.speed());
-                    return new ClockTick(new Progress(paused, incidents.countOpen(id)), false);
+                    return new ClockTick(new Progress(sim.withClock(false, sim.speed()), incidents.countOpen(id)),
+                            false);
                 }
                 return new ClockTick(stepLocked(sim), true);
             });
@@ -146,14 +164,14 @@ public class SimulationService {
         if (speed < 1 || speed > MAX_SPEED) {
             throw new IllegalArgumentException("speed must be between 1 and " + MAX_SPEED);
         }
-        if (atTickLimit(get(id).currentTick())) {
+        if (atTickLimit(getEditable(id).currentTick())) {
             throw new DemoLimitException("this demo stops simulations at tick " + limits.maxTick());
         }
         return setClock(id, true, speed);
     }
 
     public Progress pause(UUID id) {
-        return setClock(id, false, get(id).speed());
+        return setClock(id, false, getEditable(id).speed());
     }
 
     private Progress setClock(UUID id, boolean running, int speed) {
@@ -161,8 +179,7 @@ public class SimulationService {
             Simulation sim = simulations.findByIdForUpdate(id)
                     .orElseThrow(() -> new SimulationNotFoundException(id));
             simulations.updateClock(id, running, speed);
-            return new Progress(new Simulation(sim.id(), sim.seed(), sim.scenario(), sim.currentTick(),
-                    sim.modelVersion(), running, speed), incidents.countOpen(id));
+            return new Progress(sim.withClock(running, speed), incidents.countOpen(id));
         });
         events.publishEvent(new SimulationAdvanced(progress));
         return progress;

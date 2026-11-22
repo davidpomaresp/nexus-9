@@ -149,6 +149,9 @@ button.primary { background: var(--ink); border-color: var(--ink); color: var(--
 .segmented { display: flex; }
 .segmented button { margin-left: -1px; }
 .segmented button.on { border-color: var(--accent); color: var(--accent); position: relative; }
+.run.example { align-items: center; max-width: 560px; }
+.run.example span { color: var(--muted); font-size: 13px; }
+button.inline { height: auto; padding: 1px 6px; color: var(--accent); border-color: var(--accent); font-size: 12px; }
 .field-error { color: var(--crit); font-size: 12px; align-self: center; }
 .error {
   margin-bottom: 16px; padding: 10px 14px;

@@ -11,6 +11,8 @@ export interface Simulation {
   openIncidents: number;
   running: boolean;
   speed: number;
+  /** The shared example of the public demo: read-only. */
+  featured: boolean;
 }
 
 export interface PowerValues {

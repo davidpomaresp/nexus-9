@@ -32,7 +32,8 @@ class SimulationApiTest extends PostgresTestBase {
         mvc.perform(post("/api/simulations/{id}/advance", id).param("ticks", "20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.currentTick").value(20))
-                .andExpect(jsonPath("$.openIncidents").value(0));
+                .andExpect(jsonPath("$.openIncidents").value(0))
+                .andExpect(jsonPath("$.featured").value(false));
 
         mvc.perform(get("/api/simulations/{id}/modules", id))
                 .andExpect(status().isOk())
