@@ -24,9 +24,11 @@ Cada push a `main` vuelve a desplegar.
 
 ## Límites para la demo
 
-Como cualquiera puede crear simulaciones, `render.yaml` pone dos límites para no llenar la base de datos gratuita:
+Como cualquiera puede usar la demo sin registrarse, `render.yaml` pone varios límites para que nadie llene la base de datos gratuita ni tumbe el servicio:
 
-- `NEXUS_CLOCK_MAXTICK=3000`: el reloj del servidor pausa las simulaciones al llegar al tick 3000 (unas 50 horas de misión). Avanzar a mano sigue funcionando.
-- `NEXUS_RETENTION=24h`: cada hora se borran las simulaciones de más de un día.
+- `NEXUS_MAXTICK=3000`: ninguna simulación pasa del tick 3000 (unas 50 horas de misión). El reloj la pausa al llegar, y avanzar a mano o volver a arrancarla más allá devuelve 409. El límite se comprueba con la fila bloqueada en cada tick, así que tampoco se cuela con peticiones simultáneas.
+- `NEXUS_MAXSIMULATIONS=50`: como mucho 50 simulaciones a la vez; la 51 devuelve 409 hasta que la limpieza borre alguna. Con 50 × 3000 ticks × 3 módulos son 450.000 lecturas como mucho, que caben de sobra en los 0,5 GB de Neon.
+- `NEXUS_RATELIMIT_PERMINUTE=30`: cada cliente puede hacer 30 peticiones de escritura (POST) por minuto; a partir de ahí, 429. Los contadores están en memoria, que basta con una sola instancia. La IP sale de la última entrada de `X-Forwarded-For`, la que añade el proxy de Render; las anteriores las pone el cliente y se pueden falsear.
+- `NEXUS_RETENTION=24h`: cada hora se borran las simulaciones pausadas de más de un día. Las que están en marcha se saltan (se pausan solas al llegar al tick 3000 y caen en una limpieza posterior), y también las que un tick tiene bloqueadas en ese momento (`FOR UPDATE SKIP LOCKED`). La limpieza bloquea primero la fila de la simulación y luego borra telemetría e incidencias, en el mismo orden en que toma los bloqueos un tick, para que no haya interbloqueos.
 
 En local no hay límites: si no se definen esas variables, no se aplican.

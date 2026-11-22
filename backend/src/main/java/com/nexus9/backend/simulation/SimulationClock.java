@@ -2,7 +2,6 @@ package com.nexus9.backend.simulation;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -17,14 +16,10 @@ public class SimulationClock {
 
     private final SimulationRepository simulations;
     private final SimulationService service;
-    private final long maxTick;
 
-    /** {@code maxTick} stops simulations at that tick, to bound storage on a public demo; 0 means no limit. */
-    public SimulationClock(SimulationRepository simulations, SimulationService service,
-            @Value("${nexus.clock.max-tick:0}") long maxTick) {
+    public SimulationClock(SimulationRepository simulations, SimulationService service) {
         this.simulations = simulations;
         this.service = service;
-        this.maxTick = maxTick;
     }
 
     @Scheduled(fixedDelayString = "${nexus.clock.interval:250ms}")
@@ -36,15 +31,14 @@ public class SimulationClock {
 
     void step(Simulation sim) {
         try {
-            long ticks = maxTick > 0 ? Math.min(sim.speed(), maxTick - sim.currentTick()) : sim.speed();
-            if (ticks <= 0) {
-                service.pause(sim.id());
-                return;
-            }
-            service.advance(sim.id(), (int) ticks);
+            service.clockStep(sim.id());
         } catch (RuntimeException e) {
             log.warn("Stopping simulation {}: {}", sim.id(), e.getMessage());
-            service.pause(sim.id());
+            try {
+                service.pause(sim.id());
+            } catch (SimulationNotFoundException deleted) {
+                // Deleted in the meantime; nothing left to stop.
+            }
         }
     }
 }

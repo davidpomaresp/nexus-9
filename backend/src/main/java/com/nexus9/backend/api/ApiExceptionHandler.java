@@ -1,5 +1,6 @@
 package com.nexus9.backend.api;
 
+import com.nexus9.backend.simulation.DemoLimitException;
 import com.nexus9.backend.simulation.ModelVersionMismatchException;
 import com.nexus9.backend.simulation.SimulationNotFoundException;
 import java.util.NoSuchElementException;
@@ -18,6 +19,11 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(ModelVersionMismatchException.class)
     ProblemDetail conflict(ModelVersionMismatchException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
+    }
+
+    @ExceptionHandler(DemoLimitException.class)
+    ProblemDetail demoLimit(DemoLimitException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
     }
 
