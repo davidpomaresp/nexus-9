@@ -154,7 +154,7 @@ public class SimulationController {
 
     @PostMapping("/simulations/{id}/incidents/{incidentId}/acknowledge")
     public Incident acknowledge(@PathVariable UUID id, @PathVariable UUID incidentId) {
-        simulations.get(id);
+        simulations.getEditable(id);
         Incident incident = incidents.acknowledge(id, incidentId);
         events.publish(queries.summary(id));
         return incident;

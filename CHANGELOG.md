@@ -9,8 +9,8 @@
 - Se puede volver a cualquier tick del historial y abrir una simulación por su URL.
 - Dos escenarios nuevos: `oxygen-leak` y `solar-storm`.
 - Demo pública en Render + Neon, con límites de tick, de simulaciones y de peticiones por minuto, y borrado de las simulaciones abandonadas.
-- La demo abre directamente una simulación de `solar-degradation` ya en marcha.
-- Tests (Vitest) y lint (ESLint) del panel dentro del build.
+- La demo abre en una misión de ejemplo de `solar-degradation` ya avanzada, de solo lectura para que todos vean la misma cascada de fallos; «Probar mi propia simulación» crea una independiente.
+- Tests (Vitest) y lint (ESLint) del panel dentro del build, y pruebas de navegador (Playwright) en CI.
 
 ## 0.1.0 (2026-11-20)
 

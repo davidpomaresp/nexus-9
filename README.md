@@ -6,7 +6,7 @@ Quería que las averías tuvieran causa y efecto, no números aleatorios en un d
 
 ![CI](https://github.com/davidpomaresp/nexus-9/actions/workflows/ci.yml/badge.svg)
 
-**Pruébalo:** https://nexus-9-aftv.onrender.com.
+**Pruébalo:** https://nexus-9-aftv.onrender.com. Pulsa `GENERATION_DEFICIT` para ver dónde empieza el fallo y sigue la caída de la batería hasta `OXYGEN_LOW`. La misión de portada es un ejemplo de solo lectura, igual para todos; con «Probar mi propia simulación» tienes una tuya.
 
 ![Panel de NEXUS-9 con el escenario solar-degradation en marcha](docs/img/panel.gif)
 
@@ -59,6 +59,12 @@ Si vas a tocar el panel, con el backend arrancado en el 8080 puedes usar Vite co
 
 ```bash
 cd frontend && npm install && npm run dev   # http://localhost:5173
+```
+
+Las pruebas de navegador (Playwright) crean una misión, avanzan hasta una alarma, la reconocen y comprueban que sigue reconocida al recargar. Necesitan la aplicación en el 8080 arrancada con `--nexus.demo.scenario=solar-degradation`; en CI se lanzan después de `verify`:
+
+```bash
+cd frontend && npx playwright install chromium && npm run e2e
 ```
 
 La demo crea una simulación de `solar-degradation` con semilla 42 y saca esto:

@@ -15,9 +15,10 @@ interface Props {
   focused: string | null;
   onFocus: (incident: Incident) => void;
   onAcknowledge: (incident: Incident) => Promise<boolean>;
+  readOnly?: boolean;
 }
 
-export function IncidentLog({ incidents, currentTick, focused, onFocus, onAcknowledge }: Props) {
+export function IncidentLog({ incidents, currentTick, focused, onFocus, onAcknowledge, readOnly = false }: Props) {
   const rows = useRef(new Map<string, HTMLButtonElement>());
   const [said, setSaid] = useState('');
 
@@ -60,7 +61,7 @@ export function IncidentLog({ incidents, currentTick, focused, onFocus, onAcknow
               </span>
             </div>
             </button>
-            {i.status === 'OPEN' && i.acknowledgedAtTick === null ? (
+            {i.status === 'OPEN' && i.acknowledgedAtTick === null && !readOnly ? (
               <button type="button" className="ack" onClick={e => void acknowledge(i, e)}
                 aria-label={`Reconocer ${i.ruleCode}`}>Reconocer</button>
             ) : i.acknowledgedAtTick !== null ? (

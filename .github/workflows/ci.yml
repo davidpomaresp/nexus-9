@@ -20,5 +20,23 @@ jobs:
       - name: Build y tests
         run: ./mvnw -B verify
 
+      - name: Arrancar la aplicación
+        run: |
+          docker run -d --name db -p 5432:5432 -e POSTGRES_DB=nexus -e POSTGRES_USER=nexus \
+            -e POSTGRES_PASSWORD=nexus postgres:17-alpine
+          until docker exec db pg_isready -h 127.0.0.1 -U nexus; do sleep 1; done
+          java -jar backend/target/backend-*.jar --nexus.demo.scenario=solar-degradation > app.log 2>&1 &
+          timeout 90 bash -c 'until curl -sf localhost:8080/actuator/health; do sleep 2; done'
+
+      - name: Pruebas de navegador
+        working-directory: frontend
+        run: |
+          npx playwright install --with-deps chromium
+          npx playwright test
+
+      - name: Log de la aplicación
+        if: failure()
+        run: cat app.log
+
       - name: Construir imagen Docker
         run: docker build -t nexus-9:ci .

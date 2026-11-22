@@ -12,7 +12,7 @@ import org.springframework.stereotype.Repository;
 public class SimulationRepository {
 
     private static final String SELECT = """
-            SELECT id, seed, scenario, current_tick, model_version, running, speed FROM simulation
+            SELECT id, seed, scenario, current_tick, model_version, running, speed, featured FROM simulation
             """;
 
     private static final long CREATE_LOCK = 0x4E455855L;
@@ -25,11 +25,11 @@ public class SimulationRepository {
 
     public void insert(Simulation simulation) {
         jdbc.sql("""
-                INSERT INTO simulation (id, seed, scenario, current_tick, model_version, running, speed)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO simulation (id, seed, scenario, current_tick, model_version, running, speed, featured)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """)
                 .params(simulation.id(), simulation.seed(), simulation.scenario(), simulation.currentTick(),
-                        simulation.modelVersion(), simulation.running(), simulation.speed())
+                        simulation.modelVersion(), simulation.running(), simulation.speed(), simulation.featured())
                 .update();
     }
 
@@ -94,12 +94,13 @@ public class SimulationRepository {
 
     /**
      * Deletes paused simulations created before {@code cutoff} with their telemetry and incidents.
+     * The featured simulation is kept, since it cannot change.
      * The simulation rows are locked first, in the same order as a tick takes its locks, and rows a
      * tick is holding are skipped until the next purge. Must run inside a transaction.
      */
     public List<UUID> deleteCreatedBefore(Instant cutoff) {
         List<UUID> ids = jdbc.sql("""
-                SELECT id FROM simulation WHERE created_at < ? AND NOT running
+                SELECT id FROM simulation WHERE created_at < ? AND NOT running AND NOT featured
                 ORDER BY id FOR UPDATE SKIP LOCKED
                 """)
                 .param(Timestamp.from(cutoff))

@@ -18,6 +18,7 @@ export function Controls({ station, scenarios, children }: Props) {
   const creating = useRef(false);
   const [busy, setBusy] = useState(false);
   const ready = station.sim !== null;
+  const example = station.sim?.featured ?? false;
   const running = station.sim?.running ?? false;
   const speed = running ? station.sim!.speed : chosenSpeed;
 
@@ -30,10 +31,14 @@ export function Controls({ station, scenarios, children }: Props) {
       return;
     }
     setSeedError(null);
+    start(value, scenario);
+  }
+
+  function start(seed: number, scenario: string) {
     if (creating.current) return;
     creating.current = true;
     setBusy(true);
-    void station.create(value, scenario).finally(() => {
+    void station.create(seed, scenario).finally(() => {
       creating.current = false;
       setBusy(false);
     });
@@ -58,6 +63,13 @@ export function Controls({ station, scenarios, children }: Props) {
       </form>
 
       {children}
+      {example ? (
+        <div className="run example">
+          <button type="button" className="primary" disabled={busy}
+            onClick={() => start(station.sim!.seed, station.sim!.scenario)}>Probar mi propia simulación</button>
+          <span>Esta misión de ejemplo es la misma para todos y no se puede cambiar.</span>
+        </div>
+      ) : (
       <div className="run">
         <button type="button" className="primary" disabled={!ready}
           onClick={() => void (running ? station.pause() : station.run(speed))}>
@@ -72,6 +84,7 @@ export function Controls({ station, scenarios, children }: Props) {
         <button type="button" disabled={!ready} onClick={() => void station.advance(10)}>+10</button>
         <button type="button" disabled={!ready} onClick={() => void station.advance(100)}>+100</button>
       </div>
+      )}
     </div>
   );
 }
