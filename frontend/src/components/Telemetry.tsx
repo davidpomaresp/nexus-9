@@ -1,6 +1,6 @@
 import { useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import type { CommsMode, Incident, Priority, Row } from '../api';
-import { BATTERY_THRESHOLDS, OXYGEN_LOW, missionTime } from '../station';
+import { BATTERY_THRESHOLDS, OXYGEN_LOW, eclipses, missionTime } from '../station';
 
 interface Props {
   rows: Row[];
@@ -125,18 +125,6 @@ export function Telemetry({ rows, incidents, selected, focusedIncident, onSelect
       </p>
     </div>
   );
-}
-
-/** Consecutive eclipse ticks merged into [first, last] ranges. */
-function eclipses(rows: Row[]): [number, number][] {
-  const ranges: [number, number][] = [];
-  for (const r of rows) {
-    if (r.sunlit) continue;
-    const last = ranges[ranges.length - 1];
-    if (last && last[1] === r.tick - 1) last[1] = r.tick;
-    else ranges.push([r.tick, r.tick]);
-  }
-  return ranges;
 }
 
 function commsBands(rows: Row[], x: (t: number) => number, step: number) {

@@ -45,18 +45,22 @@ export function App() {
     return () => window.removeEventListener('popstate', load);
   }, [open, close]);
 
-  useEffect(() => {
+  // Another simulation starts live, with nothing focused.
+  const [shownId, setShownId] = useState(simId);
+  if (shownId !== simId) {
+    setShownId(simId);
     setSelectedTick(null);
     setFocusId(null);
+  }
+
+  // The history only keeps the last 5,000 ticks: a reviewed tick that falls out of it goes back to live.
+  if (selectedTick !== null && (firstTick === null || selectedTick < firstTick)) setSelectedTick(null);
+
+  useEffect(() => {
     if (simId && simulationIdFromPath(window.location.pathname) !== simId) {
       window.history.pushState(null, '', simulationPath(simId));
     }
   }, [simId]);
-
-  // The history only keeps the last 5,000 ticks: a reviewed tick that falls out of it goes back to live.
-  useEffect(() => {
-    if (selectedTick !== null && (firstTick === null || selectedTick < firstTick)) setSelectedTick(null);
-  }, [selectedTick, firstTick]);
 
   const backToLive = useCallback(() => {
     setSelectedTick(null);
