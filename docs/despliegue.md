@@ -31,4 +31,6 @@ Como cualquiera puede usar la demo sin registrarse, `render.yaml` pone varios l�
 - `NEXUS_RATELIMIT_PERMINUTE=30`: cada cliente puede hacer 30 peticiones de escritura (POST) por minuto; a partir de ahí, 429. Los contadores están en memoria, que basta con una sola instancia. La IP sale de la última entrada de `X-Forwarded-For`, la que añade el proxy de Render; las anteriores las pone el cliente y se pueden falsear.
 - `NEXUS_RETENTION=24h`: cada hora se borran las simulaciones pausadas de más de un día. Las que están en marcha se saltan (se pausan solas al llegar al tick 3000 y caen en una limpieza posterior), y también las que un tick tiene bloqueadas en ese momento (`FOR UPDATE SKIP LOCKED`). La limpieza bloquea primero la fila de la simulación y luego borra telemetría e incidencias, en el mismo orden en que toma los bloqueos un tick, para que no haya interbloqueos.
 
+La portada abre una simulación compartida de `solar-degradation` (semilla 42) ya avanzada hasta el tick 600, para que quien entre vea la cadena de averías sin tener que pulsar nada. La crea `NEXUS_DEMO_SCENARIO` la primera vez que alguien entra y otra vez cuando la limpieza la borra.
+
 En local no hay límites: si no se definen esas variables, no se aplican.

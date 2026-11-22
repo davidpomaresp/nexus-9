@@ -96,6 +96,7 @@ export interface StationState {
 
 export const api = {
   scenarios: () => call<string[]>('GET', '/scenarios'),
+  demo: () => call<{ id: string }>('GET', '/demo'),
   create: (seed: number, scenario: string) => call<Simulation>('POST', '/simulations', { seed, scenario }),
   advance: (id: string, ticks: number) => call<Simulation>('POST', `/simulations/${id}/advance?ticks=${ticks}`),
   run: (id: string, speed: number) => call<Simulation>('POST', `/simulations/${id}/run?speed=${speed}`),

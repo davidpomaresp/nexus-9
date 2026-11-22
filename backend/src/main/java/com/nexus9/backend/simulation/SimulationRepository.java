@@ -49,6 +49,22 @@ public class SimulationRepository {
         return true;
     }
 
+    /** Inserts {@code simulation} as the featured one, unless another is already featured. */
+    public void insertFeaturedIfMissing(Simulation simulation) {
+        jdbc.sql("""
+                INSERT INTO simulation (id, seed, scenario, current_tick, model_version, running, speed, featured)
+                VALUES (?, ?, ?, ?, ?, ?, ?, true)
+                ON CONFLICT (featured) WHERE featured DO NOTHING
+                """)
+                .params(simulation.id(), simulation.seed(), simulation.scenario(), simulation.currentTick(),
+                        simulation.modelVersion(), simulation.running(), simulation.speed())
+                .update();
+    }
+
+    public Optional<UUID> findFeaturedId() {
+        return jdbc.sql("SELECT id FROM simulation WHERE featured").query(UUID.class).optional();
+    }
+
     public Optional<Simulation> findById(UUID id) {
         return jdbc.sql(SELECT + "WHERE id = ?")
                 .param(id)
