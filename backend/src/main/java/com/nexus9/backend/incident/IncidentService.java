@@ -31,10 +31,7 @@ public class IncidentService {
         }
     }
 
-    /**
-     * Marks an open incident as acknowledged at the simulation's last completed tick. Acknowledging
-     * it again keeps the first tick, so retries are safe.
-     */
+    /** Acknowledging twice keeps the first tick. */
     public Incident acknowledge(UUID simulationId, UUID incidentId) {
         incidents.acknowledge(simulationId, incidentId);
         Incident incident = incidents.find(simulationId, incidentId)

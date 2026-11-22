@@ -56,7 +56,6 @@ public class IncidentRepository {
                 .update();
     }
 
-    /** Only open incidents not acknowledged yet are changed; returns whether this call changed it. */
     public boolean acknowledge(UUID simulationId, UUID id) {
         return jdbc.sql("""
                 UPDATE incident SET acknowledged_at_tick =

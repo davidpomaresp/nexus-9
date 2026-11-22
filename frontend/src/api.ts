@@ -55,7 +55,6 @@ export interface Incident {
   openedAtTick: number;
   resolvedAtTick: number | null;
   affectedModules: ModuleName[];
-  /** Last completed tick when an operator acknowledged it, or null. */
   acknowledgedAtTick: number | null;
 }
 
