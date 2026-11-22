@@ -13,8 +13,12 @@ services:
         sync: false
       - key: NEXUS_DB_POOL_SIZE
         value: "5"
-      - key: NEXUS_CLOCK_MAXTICK
+      - key: NEXUS_MAXTICK
         value: "3000"
+      - key: NEXUS_MAXSIMULATIONS
+        value: "50"
+      - key: NEXUS_RATELIMIT_PERMINUTE
+        value: "30"
       - key: NEXUS_RETENTION
         value: 24h
       - key: JAVA_TOOL_OPTIONS

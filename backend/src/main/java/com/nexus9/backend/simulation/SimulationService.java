@@ -6,6 +6,7 @@ import com.nexus9.simulator.Station;
 import com.nexus9.simulator.StationSnapshot;
 import com.nexus9.simulator.scenario.Scenario;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -23,11 +24,21 @@ public class SimulationService {
     private final StationRegistry stations;
     private final TransactionTemplate tx;
     private final ApplicationEventPublisher events;
+    private final Limits limits;
+
+    /**
+     * Limits for a public demo, so anonymous users cannot fill the database. {@code maxTick} stops every
+     * simulation at that tick and {@code maxSimulations} caps how many can exist; 0 means no limit.
+     */
+    public record Limits(long maxTick, int maxSimulations) {
+    }
 
     public SimulationService(SimulationRepository simulations, TelemetryRepository telemetry,
             IncidentService incidents, StationRegistry stations, TransactionTemplate tx,
-            ApplicationEventPublisher events) {
+            ApplicationEventPublisher events, @Value("${nexus.max-tick:0}") long maxTick,
+            @Value("${nexus.max-simulations:0}") int maxSimulations) {
         this.events = events;
+        this.limits = new Limits(maxTick, maxSimulations);
         this.simulations = simulations;
         this.telemetry = telemetry;
         this.incidents = incidents;
@@ -43,7 +54,10 @@ public class SimulationService {
         Scenario.byName(scenarioName);
         Simulation simulation = new Simulation(UUID.randomUUID(), seed, scenarioName, 0, Station.MODEL_VERSION,
                 false, DEFAULT_SPEED);
-        simulations.insert(simulation);
+        if (!tx.execute(status -> simulations.insertIfFewerThan(simulation, limits.maxSimulations()))) {
+            throw new DemoLimitException("this demo keeps at most " + limits.maxSimulations()
+                    + " simulations; try again later");
+        }
         return simulation;
     }
 
@@ -59,6 +73,7 @@ public class SimulationService {
         if (ticks < 1 || ticks > MAX_TICKS_PER_REQUEST) {
             throw new IllegalArgumentException("ticks must be between 1 and " + MAX_TICKS_PER_REQUEST);
         }
+        checkTickLimit(get(id).currentTick() + ticks);
         Progress progress = null;
         for (int i = 0; i < ticks; i++) {
             progress = tx.execute(status -> step(id, Long.MAX_VALUE));
@@ -78,6 +93,7 @@ public class SimulationService {
         if (targetTick - get(id).currentTick() > MAX_TICKS_PER_REQUEST) {
             throw new IllegalArgumentException("at most " + MAX_TICKS_PER_REQUEST + " ticks per request");
         }
+        checkTickLimit(targetTick);
         while (true) {
             Progress progress = tx.execute(status -> step(id, targetTick));
             if (progress.simulation().currentTick() >= targetTick) {
@@ -87,10 +103,51 @@ public class SimulationService {
         }
     }
 
+    /**
+     * One step of the server clock: up to {@code speed} ticks, stopping as soon as the simulation is
+     * paused, deleted or reaches the tick limit. Running state, speed and limit are checked under the
+     * row lock before every tick, so a pause is never overtaken by a step that already started.
+     */
+    public void clockStep(UUID id) {
+        Progress last = null;
+        for (int done = 0; ; done++) {
+            int alreadyDone = done;
+            ClockTick tick = tx.execute(status -> {
+                Simulation sim = simulations.findByIdForUpdate(id).orElse(null);
+                if (sim == null || !sim.running() || alreadyDone >= sim.speed()) {
+                    return null;
+                }
+                if (atTickLimit(sim.currentTick())) {
+                    simulations.updateClock(id, false, sim.speed());
+                    Simulation paused = new Simulation(sim.id(), sim.seed(), sim.scenario(), sim.currentTick(),
+                            sim.modelVersion(), false, sim.speed());
+                    return new ClockTick(new Progress(paused, incidents.countOpen(id)), false);
+                }
+                return new ClockTick(stepLocked(sim), true);
+            });
+            if (tick == null) {
+                break;
+            }
+            last = tick.progress();
+            if (!tick.more()) {
+                break;
+            }
+        }
+        if (last != null) {
+            events.publishEvent(new SimulationAdvanced(last));
+        }
+    }
+
+    private record ClockTick(Progress progress, boolean more) {
+    }
+
     /** Lets the server clock advance the simulation {@code speed} ticks per step. */
     public Progress run(UUID id, int speed) {
         if (speed < 1 || speed > MAX_SPEED) {
             throw new IllegalArgumentException("speed must be between 1 and " + MAX_SPEED);
+        }
+        if (atTickLimit(get(id).currentTick())) {
+            throw new DemoLimitException("this demo stops simulations at tick " + limits.maxTick());
         }
         return setClock(id, true, speed);
     }
@@ -118,6 +175,15 @@ public class SimulationService {
         if (simulation.currentTick() >= targetTick) {
             return new Progress(simulation, incidents.countOpen(id));
         }
+        if (atTickLimit(simulation.currentTick())) {
+            throw new DemoLimitException("this demo stops simulations at tick " + limits.maxTick());
+        }
+        return stepLocked(simulation);
+    }
+
+    /** Runs one tick of a simulation whose row is already locked by the current transaction. */
+    private Progress stepLocked(Simulation simulation) {
+        UUID id = simulation.id();
         if (simulation.modelVersion() != Station.MODEL_VERSION) {
             throw new ModelVersionMismatchException(id, simulation.modelVersion(), Station.MODEL_VERSION);
         }
@@ -133,6 +199,16 @@ public class SimulationService {
             // The in-memory station is now ahead of the database; drop it so it gets rebuilt.
             stations.evict(id);
             throw e;
+        }
+    }
+
+    private boolean atTickLimit(long tick) {
+        return limits.maxTick() > 0 && tick >= limits.maxTick();
+    }
+
+    private void checkTickLimit(long targetTick) {
+        if (limits.maxTick() > 0 && targetTick > limits.maxTick()) {
+            throw new DemoLimitException("this demo stops simulations at tick " + limits.maxTick());
         }
     }
 }

@@ -15,6 +15,8 @@ public class SimulationRepository {
             SELECT id, seed, scenario, current_tick, model_version, running, speed FROM simulation
             """;
 
+    private static final long CREATE_LOCK = 0x4E455855L;
+
     private final JdbcClient jdbc;
 
     public SimulationRepository(JdbcClient jdbc) {
@@ -29,6 +31,22 @@ public class SimulationRepository {
                 .params(simulation.id(), simulation.seed(), simulation.scenario(), simulation.currentTick(),
                         simulation.modelVersion(), simulation.running(), simulation.speed())
                 .update();
+    }
+
+    /**
+     * Inserts unless there are already {@code max} simulations (0 means no limit). The advisory lock
+     * serialises concurrent creations, so the count cannot be read twice before either insert.
+     */
+    public boolean insertIfFewerThan(Simulation simulation, int max) {
+        if (max > 0) {
+            jdbc.sql("SELECT pg_advisory_xact_lock(?)").param(CREATE_LOCK).query().singleRow();
+            long count = jdbc.sql("SELECT count(*) FROM simulation").query(Long.class).single();
+            if (count >= max) {
+                return false;
+            }
+        }
+        insert(simulation);
+        return true;
     }
 
     public Optional<Simulation> findById(UUID id) {
@@ -58,9 +76,16 @@ public class SimulationRepository {
                 .update();
     }
 
-    /** Deletes simulations created before {@code cutoff} with their telemetry and incidents. */
+    /**
+     * Deletes paused simulations created before {@code cutoff} with their telemetry and incidents.
+     * The simulation rows are locked first, in the same order as a tick takes its locks, and rows a
+     * tick is holding are skipped until the next purge. Must run inside a transaction.
+     */
     public List<UUID> deleteCreatedBefore(Instant cutoff) {
-        List<UUID> ids = jdbc.sql("SELECT id FROM simulation WHERE created_at < ?")
+        List<UUID> ids = jdbc.sql("""
+                SELECT id FROM simulation WHERE created_at < ? AND NOT running
+                ORDER BY id FOR UPDATE SKIP LOCKED
+                """)
                 .param(Timestamp.from(cutoff))
                 .query(UUID.class)
                 .list();

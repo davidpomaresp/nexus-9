@@ -53,19 +53,24 @@ class SimulationClockTest extends PostgresTestBase {
     }
 
     @Test
-    void stopsAtTheTickLimit() throws Exception {
+    void aStepNeverOvertakesAPause() {
         UUID id = service.create(42, "nominal").id();
-        SimulationClock limited = new SimulationClock(repository, service, 12);
+        service.advance(id, 3);
 
-        // Stepping a paused simulation directly keeps the application's own clock out of the test.
-        service.run(id, 5);
-        service.pause(id);
-        for (int i = 0; i < 4; i++) {
-            limited.step(repository.findById(id).orElseThrow());
-        }
+        service.clockStep(id);
 
-        assertThat(service.get(id).currentTick()).isEqualTo(12);
-        assertThat(service.get(id).running()).isFalse();
+        assertThat(service.get(id).currentTick()).isEqualTo(3);
+    }
+
+    @Test
+    void ignoresSimulationsDeletedMeanwhile() {
+        UUID id = service.create(42, "nominal").id();
+        Simulation stale = repository.findById(id).orElseThrow();
+        jdbc.sql("DELETE FROM simulation WHERE id = ?").param(id).update();
+
+        new SimulationClock(repository, service).step(stale);
+
+        assertThat(repository.findById(id)).isEmpty();
     }
 
     @Test
