@@ -1,14 +1,15 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import type { useSimulation } from '../useSimulation';
 
 interface Props {
   station: ReturnType<typeof useSimulation>;
   scenarios: string[];
+  children?: ReactNode;
 }
 
 const SPEEDS = [1, 5, 20];
 
-export function Controls({ station, scenarios }: Props) {
+export function Controls({ station, scenarios, children }: Props) {
   const [scenario, setScenario] = useState('solar-degradation');
   const [seed, setSeed] = useState('42');
   const [seedError, setSeedError] = useState<string | null>(null);
@@ -47,6 +48,7 @@ export function Controls({ station, scenarios }: Props) {
         {seedError && <span className="field-error">{seedError}</span>}
       </form>
 
+      {children}
       <div className="run">
         <button type="button" className="primary" disabled={!ready}
           onClick={() => void (running ? station.pause() : station.run(speed))}>

@@ -2,10 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, simulationIdFromPath, simulationPath, type Incident, type ModuleStatus } from './api';
 import { Controls } from './components/Controls';
 import { IncidentLog } from './components/IncidentLog';
+import { MasterCaution } from './components/MasterCaution';
 import { OrbitDial } from './components/OrbitDial';
 import { StationMap } from './components/StationMap';
 import { Telemetry } from './components/Telemetry';
-import { missionTime } from './station';
+import { Timeline } from './components/Timeline';
+import { ORBIT_TICKS, missionTime, orbitPhase } from './station';
 import { useSimulation } from './useSimulation';
 
 const SEVERITY: ModuleStatus[] = ['NOMINAL', 'DEGRADED', 'CRITICAL', 'OFFLINE'];
@@ -58,6 +60,7 @@ export function App() {
     setSelectedTick(firstTick !== null && incident.openedAtTick >= firstTick ? incident.openedAtTick : null);
   }, [firstTick]);
 
+  const phase = sim ? orbitPhase(sim.currentTick) : null;
   const focus = incidents.find(i => i.id === focusId) ?? null;
   const reviewing = selectedTick !== null;
   const overall = modules.reduce<ModuleStatus>(
@@ -70,11 +73,11 @@ export function App() {
           <span className="logo" aria-hidden />
           <div>
             <h1>NEXUS-9</h1>
-            <p>Centro de control de la estación</p>
+            <p>Control de misión{sim && <> · {sim.scenario} / {sim.seed}</>}</p>
           </div>
         </div>
         {sim && (
-          <div className="mission">
+          <>
             <div className="clock">
               <span className="label">Tiempo de misión</span>
               <strong>{missionTime(sim.currentTick)}</strong>
@@ -83,16 +86,30 @@ export function App() {
                   {station.live ? (sim.running ? 'en directo' : 'conectado') : 'sin conexión'}</span>
               </span>
             </div>
-            <div className={`overall s-${overall}`}>
-              <span className="label">Estación</span>
-              <strong>{overall}</strong>
-              <span className="sub">{sim.openIncidents} incidencias abiertas</span>
-            </div>
-          </div>
+            <dl className="stats">
+              <div>
+                <dt>Órbita</dt>
+                <dd>{String(Math.floor(sim.currentTick / ORBIT_TICKS) + 1).padStart(2, '0')} ·{' '}
+                  {phase!.position}/{ORBIT_TICKS}</dd>
+              </div>
+              <div>
+                <dt>{phase!.sunlit ? 'Al sol' : 'En sombra'}</dt>
+                <dd className={phase!.sunlit ? 'sun' : 'shade'}>−{phase!.remaining} min</dd>
+              </div>
+              <div className={`s-${overall}`}>
+                <dt>Estación</dt>
+                <dd className="state">{overall}</dd>
+              </div>
+            </dl>
+            <MasterCaution incidents={incidents} onShow={focusIncident} />
+          </>
         )}
       </header>
 
-      <Controls station={station} scenarios={scenarios} />
+      <Controls station={station} scenarios={scenarios}>
+        {sim && <Timeline rows={rows} incidents={incidents} currentTick={sim.currentTick} selected={selectedTick}
+          focused={focusId} onFocus={focusIncident} />}
+      </Controls>
 
       {station.error && <div className="error" role="alert">{station.error}</div>}
 
@@ -122,7 +139,7 @@ export function App() {
           </div>
           <main className="grid">
             <section className="panel map">
-              <h2>Estación <small>estado en directo</small></h2>
+              <h2>Estación y dependencias <small>estado en directo</small></h2>
               <StationMap modules={modules} incidents={incidents} focus={focus} />
               {focus && (
                 <p className="map-focus">
@@ -143,7 +160,7 @@ export function App() {
                 onSelect={tick => (tick === null ? backToLive() : setSelectedTick(tick))} />
             </section>
             <section className="panel incidents">
-              <h2>Incidencias</h2>
+              <h2>Caution &amp; warning <small>{incidents.filter(i => i.status === 'OPEN' && i.acknowledgedAtTick === null).length} sin reconocer</small></h2>
               <IncidentLog incidents={incidents} currentTick={sim.currentTick} focused={focusId}
                 onFocus={focusIncident} onAcknowledge={i => station.acknowledge(i.id)} />
             </section>
