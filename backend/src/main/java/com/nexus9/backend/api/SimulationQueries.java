@@ -49,13 +49,27 @@ class SimulationQueries {
 
     /** Every module at the last completed tick. */
     List<ModuleResponse> modules(UUID id) {
+        return snapshot.execute(status -> modulesAt(simulations.get(id)));
+    }
+
+    /** Everything the panel needs from one snapshot, with at most maxTicks ticks of readings. */
+    StateResponse state(UUID id, long fromTick, int maxTicks) {
         return snapshot.execute(status -> {
             Simulation sim = simulations.get(id);
-            Map<StationModule, TelemetryRecord> records = telemetry.atTick(id, sim.currentTick() - 1);
-            List<Incident> open = incidents.find(id, Optional.of(IncidentStatus.OPEN));
-            return Arrays.stream(StationModule.values())
-                    .map(module -> ModuleStatusResolver.resolve(module, records.get(module), open))
-                    .toList();
+            long last = sim.currentTick() - 1;
+            long from = Math.max(fromTick, last - maxTicks + 1);
+            List<TelemetryRecord> readings = from > last ? List.of() : telemetry.findAll(id, from, last);
+            List<Incident> all = incidents.find(id, Optional.empty());
+            int open = (int) all.stream().filter(i -> i.status() == IncidentStatus.OPEN).count();
+            return new StateResponse(SimulationResponse.of(sim, open), modulesAt(sim), all, readings);
         });
+    }
+
+    private List<ModuleResponse> modulesAt(Simulation sim) {
+        Map<StationModule, TelemetryRecord> records = telemetry.atTick(sim.id(), sim.currentTick() - 1);
+        List<Incident> open = incidents.find(sim.id(), Optional.of(IncidentStatus.OPEN));
+        return Arrays.stream(StationModule.values())
+                .map(module -> ModuleStatusResolver.resolve(module, records.get(module), open))
+                .toList();
     }
 }

@@ -4,6 +4,7 @@ import type { Incident, Module, ModuleName } from '../api';
 interface Props {
   modules: Module[];
   incidents: Incident[];
+  focus: Incident | null;
 }
 
 interface Box {
@@ -21,7 +22,7 @@ const BOX: Record<ModuleName, Box> = {
 
 const fmt = (v: number | undefined, digits = 1) => (typeof v === 'number' ? v.toFixed(digits) : '—');
 
-export function StationMap({ modules, incidents }: Props) {
+export function StationMap({ modules, incidents, focus }: Props) {
   const byName = new Map(modules.map(m => [m.module, m]));
   const power = byName.get('POWER');
   const oxygen = byName.get('OXYGEN');
@@ -29,15 +30,19 @@ export function StationMap({ modules, incidents }: Props) {
   // Modules exposed to an open power incident, as the dependency graph says.
   const exposed = new Set(incidents.filter(i => i.status === 'OPEN' && i.module === 'POWER')
     .flatMap(i => i.affectedModules));
+  const role = (name: ModuleName): Role =>
+    focus?.module === name ? 'origin' : focus?.affectedModules.includes(name) ? 'affected' : null;
 
   return (
     <div className="scroll-x"><svg className="station-map" viewBox="0 0 640 280" role="img"
-      aria-label="Esquema de la estación: energía alimenta a oxígeno y comunicaciones">
+      aria-label={'Esquema de la estación: energía alimenta a oxígeno y comunicaciones' + (focus
+        ? `. ${focus.ruleCode}: origen ${focus.module}, puede afectar a ${focus.affectedModules.join(', ') || 'ninguno'}`
+        : '')}>
       <Link to="OXYGEN" live={oxygen?.values.generatorPowered === true} exposed={exposed.has('OXYGEN')} />
       <Link to="COMMS" live={comms?.values.mode !== undefined && comms.values.mode !== 'OFF'}
         exposed={exposed.has('COMMS')} />
 
-      <Node module={power} name="POWER" title="Energía">
+      <Node module={power} name="POWER" role={role('POWER')} title="Energía">
         <Metric y={80} label="Generación" value={`${fmt(power?.values.generationKw, 2)} kW`} />
         <Metric y={102} label="Demanda" value={`${fmt(power?.values.demandKw)} kW`} />
         <Metric y={124} label="Servido" value={`${fmt(power?.values.servedKw, 2)} kW`} />
@@ -45,14 +50,14 @@ export function StationMap({ modules, incidents }: Props) {
         <Bar y={160} w={BOX.POWER.w - 32} percent={power?.values.batteryPercent ?? 0} />
       </Node>
 
-      <Node module={oxygen} name="OXYGEN" title="Oxígeno">
+      <Node module={oxygen} name="OXYGEN" role={role('OXYGEN')} title="Oxígeno">
         <Metric y={80} label="Nivel" value={`${fmt(oxygen?.values.levelPercent, 2)} %`} />
         <Metric y={102} label="Generador"
           value={oxygen?.values.generatorPowered === undefined ? '—'
             : oxygen.values.generatorPowered ? 'alimentado' : 'sin energía'} />
       </Node>
 
-      <Node module={comms} name="COMMS" title="Comunicaciones">
+      <Node module={comms} name="COMMS" role={role('COMMS')} title="Comunicaciones">
         <Metric y={80} label="Modo" value={comms?.values.mode ?? '—'} />
         <Metric y={102} label="Consumo"
           value={{ FULL: '1.5 kW', MINIMAL: '0.4 kW', OFF: '0 kW' }[comms?.values.mode ?? 'OFF']} />
@@ -61,21 +66,27 @@ export function StationMap({ modules, incidents }: Props) {
   );
 }
 
-function Node({ module, name, title, children }: {
-  module: Module | undefined; name: ModuleName; title: string; children: ReactNode;
+type Role = 'origin' | 'affected' | null;
+const ROLE_LABEL = { origin: 'origen', affected: 'puede verse afectado' };
+
+function Node({ module, name, title, role, children }: {
+  module: Module | undefined; name: ModuleName; title: string; role: Role; children: ReactNode;
 }) {
   const { x, y, w, h } = BOX[name];
-  const status = module?.status ?? 'NOMINAL';
+  // no readings before the first tick
+  const status = module?.tick == null ? null : module.status;
   return (
-    <g transform={`translate(${x} ${y})`} className={`node s-${status}`}>
+    <g transform={`translate(${x} ${y})`} className={`node s-${status ?? 'NONE'}${role ? ` role-${role}` : ''}`}>
+      {role && <rect x={-5} y={-5} width={w + 10} height={h + 10} rx={14} className="node-focus" />}
       <rect width={w} height={h} rx={10} className="node-box" />
       <rect width={4} height={h - 20} x={0} y={10} rx={2} className="node-edge" />
       <text x={16} y={28} className="node-name">{name}</text>
       <text x={16} y={44} className="node-title">{title}</text>
       <g transform={`translate(${w - 16} 16)`}>
         <rect x={-90} width={90} height={22} rx={11} className="node-pill" />
-        <text x={-45} y={15} textAnchor="middle" className="node-pill-text">{status}</text>
+        <text x={-45} y={15} textAnchor="middle" className="node-pill-text">{status ?? 'SIN DATOS'}</text>
       </g>
+      {role && <text x={16} y={62} className="node-role">{ROLE_LABEL[role]}</text>}
       {module?.highestPriority && (
         <text x={w - 16} y={54} textAnchor="end" className="node-priority">
           máx. {module.highestPriority}

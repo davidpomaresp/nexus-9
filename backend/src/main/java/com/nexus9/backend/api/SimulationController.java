@@ -102,6 +102,14 @@ public class SimulationController {
         return queries.modules(id);
     }
 
+    @GetMapping("/simulations/{id}/state")
+    public StateResponse state(@PathVariable UUID id, @RequestParam(defaultValue = "0") long fromTick) {
+        if (fromTick < 0) {
+            throw new IllegalArgumentException("fromTick must not be negative");
+        }
+        return queries.state(id, fromTick, MAX_READINGS);
+    }
+
     /** Without {@code fromTick}, returns the last {@value #MAX_READINGS} readings up to {@code toTick}. */
     @GetMapping("/simulations/{id}/modules/{module}/readings")
     public List<TelemetryRecord> readings(@PathVariable UUID id, @PathVariable StationModule module,

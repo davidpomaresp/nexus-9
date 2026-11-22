@@ -69,7 +69,11 @@ export interface Row {
   comms: CommsMode;
 }
 
-export class ApiError extends Error {}
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
+}
 
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch('/api' + path, {
@@ -78,8 +82,15 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json();
-  if (!res.ok) throw new ApiError(data.detail ?? res.statusText);
+  if (!res.ok) throw new ApiError(data.detail ?? res.statusText, res.status);
   return data as T;
+}
+
+export interface StationState {
+  simulation: Simulation;
+  modules: Module[];
+  incidents: Incident[];
+  readings: Reading<PowerValues | OxygenValues | CommsValues>[];
 }
 
 export const api = {
@@ -88,33 +99,31 @@ export const api = {
   advance: (id: string, ticks: number) => call<Simulation>('POST', `/simulations/${id}/advance?ticks=${ticks}`),
   run: (id: string, speed: number) => call<Simulation>('POST', `/simulations/${id}/run?speed=${speed}`),
   pause: (id: string) => call<Simulation>('POST', `/simulations/${id}/pause`),
-  modules: (id: string) => call<Module[]>('GET', `/simulations/${id}/modules`),
-  incidents: (id: string) => call<Incident[]>('GET', `/simulations/${id}/incidents`),
-  readings: <T>(id: string, module: ModuleName, toTick: number) =>
-    call<Reading<T>[]>('GET', `/simulations/${id}/modules/${module}/readings?toTick=${toTick}`),
+  state: (id: string, fromTick: number) => call<StationState>('GET', `/simulations/${id}/state?fromTick=${fromTick}`),
 };
 
-/** Last 5000 ticks up to the simulation's current tick, joined by tick. */
-export async function history(sim: Simulation): Promise<Row[]> {
-  if (sim.currentTick === 0) return [];
-  const to = sim.currentTick - 1;
-  const [power, oxygen, comms] = await Promise.all([
-    api.readings<PowerValues>(sim.id, 'POWER', to),
-    api.readings<OxygenValues>(sim.id, 'OXYGEN', to),
-    api.readings<CommsValues>(sim.id, 'COMMS', to),
-  ]);
-  const o2 = new Map(oxygen.map(r => [r.tick, r.values]));
-  const co = new Map(comms.map(r => [r.tick, r.values]));
-  return power
-    .filter(p => o2.has(p.tick) && co.has(p.tick))
-    .map(p => ({
-      tick: p.tick,
-      sunlit: p.values.sunlit,
-      generation: p.values.generationKw,
-      demand: p.values.demandKw,
-      served: p.values.servedKw,
-      battery: p.values.batteryPercent,
-      oxygen: o2.get(p.tick)!.levelPercent,
-      comms: co.get(p.tick)!.mode,
-    }));
+// One row per tick. Ticks missing a module are skipped.
+export function toRows(readings: StationState['readings']): Row[] {
+  const byTick = new Map<number, Partial<PowerValues & OxygenValues & CommsValues>>();
+  for (const r of readings) byTick.set(r.tick, { ...byTick.get(r.tick), ...r.values });
+  const rows: Row[] = [];
+  for (const [tick, v] of byTick) {
+    if (v.generationKw === undefined || v.levelPercent === undefined || v.mode === undefined) continue;
+    rows.push({
+      tick,
+      sunlit: v.sunlit!,
+      generation: v.generationKw,
+      demand: v.demandKw!,
+      served: v.servedKw!,
+      battery: v.batteryPercent!,
+      oxygen: v.levelPercent,
+      comms: v.mode,
+    });
+  }
+  return rows.sort((a, b) => a.tick - b.tick);
+}
+
+export const simulationPath = (id: string) => `/simulations/${id}`;
+export function simulationIdFromPath(path: string): string | null {
+  return /^\/simulations\/([0-9a-f-]{36})\/?$/i.exec(path)?.[1] ?? null;
 }
