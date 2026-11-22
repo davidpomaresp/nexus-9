@@ -29,6 +29,10 @@ export function useSimulation() {
 
   const fail = useCallback((e: unknown) => setError(e instanceof Error ? e.message : String(e)), []);
 
+  // true while the simulation that started a request is still the one on screen
+  const still = useCallback((gen: number, id: string) =>
+    gen === generation.current && stateRef.current.sim?.id === id, []);
+
   const publish = useCallback((next: SimulationState) => {
     stateRef.current = next;
     setState(next);
@@ -65,13 +69,13 @@ export function useSimulation() {
           const rows = [...keep.filter(r => r.tick < (fresh[0]?.tick ?? Infinity)), ...fresh].slice(-MAX_ROWS);
           publish({ sim: next.simulation, rows, modules: next.modules, incidents: next.incidents });
         } catch (e) {
-          if (gen === generation.current) fail(e);
+          if (still(gen, id)) fail(e);
         }
       } while (pending.current);
     } finally {
       refreshing.current = false;
     }
-  }, [fail, publish]);
+  }, [fail, publish, still]);
 
   // Events only say that something changed. The screen is always updated from a full /state answer,
   // so the summary, modules, charts and incidents never come from different ticks.
@@ -138,21 +142,26 @@ export function useSimulation() {
     }
   }, [publish, refresh, fail]);
 
-  /** Runs one request at a time against the current simulation. */
+  /**
+   * Runs one request at a time against the current simulation. The lock is only held for the
+   * request itself, so a reload kept busy by live events never blocks Pause.
+   */
   const command = useCallback(async (call: (id: string) => Promise<Simulation>) => {
     const current = stateRef.current.sim;
     if (busy.current || !current) return;
     busy.current = true;
+    const gen = generation.current;
     setError(null);
     try {
       await call(current.id);
-      await refresh();
     } catch (e) {
-      fail(e);
+      if (still(gen, current.id)) fail(e);
+      return;
     } finally {
       busy.current = false;
     }
-  }, [refresh, fail]);
+    void refresh();
+  }, [refresh, fail, still]);
 
   const advance = useCallback((ticks: number) => command(id => api.advance(id, ticks)), [command]);
   const run = useCallback((speed: number) => command(id => api.run(id, speed)), [command]);
