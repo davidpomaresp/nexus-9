@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Incident, Priority, Row } from '../api';
-import { missionTime } from '../station';
+import { eclipses as eclipseRanges, groupByDistance, missionTime } from '../station';
 
 interface Props {
   rows: Row[];
@@ -21,36 +21,28 @@ export function Timeline({ rows, incidents, currentTick, selected, focused, onFo
   // the list keeps the incidents it was opened with, even if the grouping changes while it is open
   const [listed, setListed] = useState<string[]>([]);
 
+  const hasRows = rows.length > 0;
+
   useEffect(() => {
     const el = track.current;
     if (!el) return;
     const watch = new ResizeObserver(() => setWidth(el.clientWidth));
     watch.observe(el);
     return () => watch.disconnect();
-  }, [rows.length > 0]);
+  }, [hasRows]);
 
   if (!rows.length) return null;
   const first = rows[0].tick;
   const span = Math.max(1, currentTick - first);
   const at = (tick: number) => `${(((tick - first) / span) * 100).toFixed(3)}%`;
 
-  const eclipses: [number, number][] = [];
-  for (const r of rows) {
-    if (r.sunlit) continue;
-    const last = eclipses[eclipses.length - 1];
-    if (last && last[1] === r.tick - 1) last[1] = r.tick;
-    else eclipses.push([r.tick, r.tick]);
-  }
+  const eclipses = eclipseRanges(rows);
   const marks = [0, 0.25, 0.5, 0.75, 1].map(f => Math.round(first + f * span));
 
   // incidents too close to tell apart on screen share one marker that opens a list
-  const groups: Incident[][] = [];
   const px = (tick: number) => ((tick - first) / span) * width;
-  for (const i of incidents.filter(i => i.openedAtTick >= first).sort((a, b) => a.openedAtTick - b.openedAtTick)) {
-    const last = groups[groups.length - 1];
-    if (last && width > 0 && px(i.openedAtTick) - px(last[0].openedAtTick) < MIN_GAP) last.push(i);
-    else groups.push([i]);
-  }
+  const visible = incidents.filter(i => i.openedAtTick >= first).sort((a, b) => a.openedAtTick - b.openedAtTick);
+  const groups = width > 0 ? groupByDistance(visible, i => px(i.openedAtTick), MIN_GAP) : visible.map(i => [i]);
   const shown = incidents.filter(i => listed.includes(i.id));
 
   return (
