@@ -4,6 +4,7 @@ import com.nexus9.backend.domain.StationModule;
 import com.nexus9.backend.incident.Incident;
 import com.nexus9.backend.incident.IncidentService;
 import com.nexus9.backend.incident.IncidentStatus;
+import com.nexus9.backend.simulation.DemoSimulation;
 import com.nexus9.backend.simulation.Simulation;
 import com.nexus9.backend.simulation.SimulationService;
 import com.nexus9.backend.simulation.SimulationService.Progress;
@@ -13,8 +14,10 @@ import com.nexus9.simulator.scenario.Scenario;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,10 +40,12 @@ public class SimulationController {
     private final TelemetryRepository telemetry;
     private final SimulationQueries queries;
     private final SimulationEvents events;
+    private final ObjectProvider<DemoSimulation> demo;
 
     SimulationController(SimulationService simulations, IncidentService incidents, TelemetryRepository telemetry,
-            SimulationQueries queries, SimulationEvents events) {
+            SimulationQueries queries, SimulationEvents events, ObjectProvider<DemoSimulation> demo) {
         this.events = events;
+        this.demo = demo;
         this.simulations = simulations;
         this.incidents = incidents;
         this.telemetry = telemetry;
@@ -50,6 +55,15 @@ public class SimulationController {
     @GetMapping("/scenarios")
     public List<String> scenarios() {
         return Scenario.BUILT_IN.stream().map(Scenario::name).toList();
+    }
+
+    /** The simulation the panel opens with on the public demo; 404 where there is none. */
+    @GetMapping("/demo")
+    public ResponseEntity<Map<String, UUID>> demo() {
+        DemoSimulation featured = demo.getIfAvailable();
+        return featured == null
+                ? ResponseEntity.notFound().build()
+                : ResponseEntity.ok(Map.of("id", featured.id()));
     }
 
     @PostMapping("/simulations")
