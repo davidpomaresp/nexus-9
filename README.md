@@ -6,6 +6,8 @@ Quería que las averías tuvieran causa y efecto, no números aleatorios en un d
 
 ![CI](https://github.com/davidpomaresp/nexus-9/actions/workflows/ci.yml/badge.svg)
 
+**Pruébalo:** https://nexus-9-aftv.onrender.com. Está en el plan gratuito de Render, así que si nadie lo ha abierto en un rato tarda alrededor de un minuto en despertar.
+
 ## Qué hace
 
 - Simula la estación tick a tick (1 tick = 1 minuto): órbita con día y noche, paneles, batería, oxígeno y comunicaciones.

@@ -3,6 +3,7 @@ services:
     name: nexus-9
     runtime: docker
     plan: free
+    region: ohio
     healthCheckPath: /actuator/health
     envVars:
       - key: NEXUS_DB_URL
