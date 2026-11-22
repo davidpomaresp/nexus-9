@@ -1,6 +1,6 @@
-# Especificación — NEXUS-9 v0.1 "Telemetry Core"
+# Especificación de NEXUS-9
 
-> Implementada en la v0.1. Lo que se añadió después está marcado con (v0.2).
+> Empezó como la especificación de la v0.1. Lo que se añadió en la v0.2 está marcado con (v0.2).
 > El porqué de las decisiones está en [`docs/adr/`](adr/).
 
 ## 1. Objetivo
