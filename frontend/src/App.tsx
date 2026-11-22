@@ -143,8 +143,9 @@ export function App() {
               <StationMap modules={modules} incidents={incidents} focus={focus} />
               {focus && (
                 <p className="map-focus">
-                  <b>{focus.ruleCode}</b> · origen {focus.module} · puede afectar a{' '}
-                  {focus.affectedModules.join(', ') || 'ningún otro módulo'}
+                  <b>{focus.ruleCode}</b> · origen {focus.module} ·{' '}
+                  {focus.affectedModules.length
+                    ? `puede afectar a ${focus.affectedModules.join(', ')}` : 'no afecta a ningún otro módulo'}
                   {(firstTick === null || focus.openedAtTick < firstTick) &&
                     <> · su lectura (t={focus.openedAtTick}) ya no está en el historial cargado</>}
                 </p>
