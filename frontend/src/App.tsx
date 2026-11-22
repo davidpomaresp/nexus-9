@@ -16,7 +16,8 @@ export function App() {
   // null = following live
   const [selectedTick, setSelectedTick] = useState<number | null>(null);
   const [focusId, setFocusId] = useState<string | null>(null);
-  const { sim, modules, rows, incidents, open } = station;
+  const { sim, modules, rows, incidents, open, close } = station;
+  const firstTick = rows.length ? rows[0].tick : null;
   const simId = sim?.id;
 
   useEffect(() => {
@@ -27,11 +28,12 @@ export function App() {
     const load = () => {
       const id = simulationIdFromPath(window.location.pathname);
       if (id) void open(id);
+      else close();
     };
     load();
     window.addEventListener('popstate', load);
     return () => window.removeEventListener('popstate', load);
-  }, [open]);
+  }, [open, close]);
 
   useEffect(() => {
     setSelectedTick(null);
@@ -41,6 +43,11 @@ export function App() {
     }
   }, [simId]);
 
+  // The history only keeps the last 5,000 ticks: a reviewed tick that falls out of it goes back to live.
+  useEffect(() => {
+    if (selectedTick !== null && (firstTick === null || selectedTick < firstTick)) setSelectedTick(null);
+  }, [selectedTick, firstTick]);
+
   const backToLive = useCallback(() => {
     setSelectedTick(null);
     setFocusId(null);
@@ -48,8 +55,8 @@ export function App() {
 
   const focusIncident = useCallback((incident: Incident) => {
     setFocusId(incident.id);
-    setSelectedTick(incident.openedAtTick);
-  }, []);
+    setSelectedTick(firstTick !== null && incident.openedAtTick >= firstTick ? incident.openedAtTick : null);
+  }, [firstTick]);
 
   const focus = incidents.find(i => i.id === focusId) ?? null;
   const reviewing = selectedTick !== null;
@@ -121,6 +128,8 @@ export function App() {
                 <p className="map-focus">
                   <b>{focus.ruleCode}</b> · origen {focus.module} · puede afectar a{' '}
                   {focus.affectedModules.join(', ') || 'ningún otro módulo'}
+                  {(firstTick === null || focus.openedAtTick < firstTick) &&
+                    <> · su lectura (t={focus.openedAtTick}) ya no está en el historial cargado</>}
                 </p>
               )}
             </section>

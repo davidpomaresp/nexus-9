@@ -217,7 +217,7 @@ h2 small { font-size: 10px; margin-left: 8px; letter-spacing: .1em; opacity: .8;
 .marker.crit { stroke: var(--crit); }
 .cursor { stroke: var(--ink); stroke-opacity: .7; stroke-width: 1.5; }
 .marker.focused { stroke-dasharray: none; stroke-width: 2.5; stroke-opacity: 1; }
-.chart-slider { border-radius: 8px; touch-action: pan-x; }
+.chart-slider { border-radius: 8px; }
 .chart-slider svg { cursor: crosshair; }
 .band.ok { fill: var(--ok); }
 .band.warn { fill: var(--warn); }

@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
+import { useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import type { CommsMode, Incident, Priority, Row } from '../api';
 import { BATTERY_THRESHOLDS, OXYGEN_LOW, missionTime } from '../station';
 
@@ -19,6 +19,7 @@ const COMMS_CLASS: Record<CommsMode, string> = { FULL: 'ok', MINIMAL: 'warn', OF
 
 export function Telemetry({ rows, incidents, selected, focusedIncident, onSelect }: Props) {
   const [hover, setHover] = useState<number | null>(null);
+  const press = useRef<{ x: number; y: number } | null>(null);
   if (!rows.length) return <p className="muted">Avanza la simulación para ver la telemetría.</p>;
 
   const first = rows[0].tick;
@@ -53,11 +54,16 @@ export function Telemetry({ rows, incidents, selected, focusedIncident, onSelect
     e.preventDefault();
   }
 
+  // mouse: hover previews, click pins. touch: a tap pins, a drag just scrolls the page
   const pointer = {
-    // mouse: hover previews, click pins. touch: tap pins
     onPointerMove: (e: PointerEvent<SVGSVGElement>) => e.pointerType === 'mouse' && setHover(tickAt(e)),
     onPointerLeave: () => setHover(null),
-    onPointerDown: (e: PointerEvent<SVGSVGElement>) => {
+    onPointerDown: (e: PointerEvent<SVGSVGElement>) => { press.current = { x: e.clientX, y: e.clientY }; },
+    onPointerCancel: () => { press.current = null; },
+    onPointerUp: (e: PointerEvent<SVGSVGElement>) => {
+      const start = press.current;
+      press.current = null;
+      if (!start || Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) return;
       const tick = tickAt(e);
       if (tick !== null) onSelect(tick);
     },
@@ -165,6 +171,8 @@ interface ChartProps {
     onPointerMove: (e: PointerEvent<SVGSVGElement>) => void;
     onPointerLeave: () => void;
     onPointerDown: (e: PointerEvent<SVGSVGElement>) => void;
+    onPointerCancel: () => void;
+    onPointerUp: (e: PointerEvent<SVGSVGElement>) => void;
   };
   children: (y: (v: number) => number) => ReactNode;
 }

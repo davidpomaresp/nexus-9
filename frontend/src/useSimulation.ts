@@ -73,14 +73,11 @@ export function useSimulation() {
     }
   }, [fail, publish]);
 
-  const accept = useCallback((sim: Simulation) => {
-    const current = stateRef.current.sim;
-    if (!current || current.id !== sim.id) return;
-    // Events and responses can arrive out of order; never go back in time.
-    if (sim.currentTick < current.currentTick) return;
-    publish({ ...stateRef.current, sim });
-    void refresh();
-  }, [publish, refresh]);
+  // Events only say that something changed. The screen is always updated from a full /state answer,
+  // so the summary, modules, charts and incidents never come from different ticks.
+  const changed = useCallback((sim: Simulation) => {
+    if (stateRef.current.sim?.id === sim.id) void refresh();
+  }, [refresh]);
 
   const simId = state.sim?.id;
 
@@ -89,12 +86,12 @@ export function useSimulation() {
     const source = new EventSource(`/api/simulations/${simId}/events`);
     source.onopen = () => setLive(true);
     source.onerror = () => setLive(false);
-    source.addEventListener('state', e => accept(JSON.parse((e as MessageEvent).data)));
+    source.addEventListener('state', e => changed(JSON.parse((e as MessageEvent).data)));
     return () => {
       source.close();
       setLive(false);
     };
-  }, [simId, accept]);
+  }, [simId, changed]);
 
   const open = useCallback(async (id: string) => {
     setError(null);
@@ -117,6 +114,13 @@ export function useSimulation() {
       }
     }
   }, [publish, fail]);
+
+  /** Back to no simulation, for example when going back to the home page. */
+  const close = useCallback(() => {
+    generation.current++;
+    setError(null);
+    publish(EMPTY);
+  }, [publish]);
 
   const create = useCallback(async (seed: number, scenario: string) => {
     setError(null);
@@ -141,17 +145,18 @@ export function useSimulation() {
     busy.current = true;
     setError(null);
     try {
-      accept(await call(current.id));
+      await call(current.id);
+      await refresh();
     } catch (e) {
       fail(e);
     } finally {
       busy.current = false;
     }
-  }, [accept, fail]);
+  }, [refresh, fail]);
 
   const advance = useCallback((ticks: number) => command(id => api.advance(id, ticks)), [command]);
   const run = useCallback((speed: number) => command(id => api.run(id, speed)), [command]);
   const pause = useCallback(() => command(id => api.pause(id)), [command]);
 
-  return { ...state, error, live, open, create, advance, run, pause };
+  return { ...state, error, live, open, close, create, advance, run, pause };
 }
