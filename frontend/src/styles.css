@@ -309,5 +309,5 @@ button.incident[aria-pressed="true"] { border-color: var(--accent); border-left-
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 @media (prefers-reduced-motion: reduce) {
-  .link-flow, .s-CRITICAL .node-box, .master::before { animation: none; }
+  .link-flow, .s-CRITICAL .node-box, .master:is(.caution, .warning)::before { animation: none; }
 }

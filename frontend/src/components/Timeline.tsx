@@ -18,7 +18,8 @@ const MIN_GAP = 18; // px, a bit more than a marker
 export function Timeline({ rows, incidents, currentTick, selected, focused, onFocus }: Props) {
   const track = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
-  const [openGroup, setOpenGroup] = useState<number | null>(null);
+  // the list keeps the incidents it was opened with, even if the grouping changes while it is open
+  const [listed, setListed] = useState<string[]>([]);
 
   useEffect(() => {
     const el = track.current;
@@ -50,7 +51,7 @@ export function Timeline({ rows, incidents, currentTick, selected, focused, onFo
     if (last && width > 0 && px(i.openedAtTick) - px(last[0].openedAtTick) < MIN_GAP) last.push(i);
     else groups.push([i]);
   }
-  const shownGroup = groups.find(g => g.length > 1 && g[0].openedAtTick === openGroup);
+  const shown = incidents.filter(i => listed.includes(i.id));
 
   return (
     <div className="timeline">
@@ -71,23 +72,25 @@ export function Timeline({ rows, incidents, currentTick, selected, focused, onFo
           }
           const tick = g[0].openedAtTick;
           const worst = g.reduce((a, b) => (RANK[b.priority] < RANK[a.priority] ? b : a));
+          const isOpen = g.every(i => listed.includes(i.id));
           return (
             <button key={g[0].id} type="button" style={{ left: at(tick) }}
               className={`timeline-mark group ${LEVEL[worst.priority]}`}
-              aria-label={`${g.length} incidencias desde el tick ${tick}`} aria-expanded={openGroup === tick}
-              onClick={() => setOpenGroup(openGroup === tick ? null : tick)}>{g.length}</button>
+              aria-label={`${g.length} incidencias desde el tick ${tick}`} aria-expanded={isOpen}
+              onClick={() => setListed(isOpen ? [] : g.map(i => i.id))}>{g.length}</button>
           );
         })}
       </div>
-      {shownGroup && (
-        <ul className="timeline-list">
-          {shownGroup.map(i => (
+      {shown.length > 0 && (
+        <ul className="timeline-list" aria-label="Incidencias del grupo">
+          {shown.map(i => (
             <li key={i.id}>
               <button type="button" aria-pressed={i.id === focused} onClick={() => onFocus(i)}>
                 {i.ruleCode} · t={i.openedAtTick}
               </button>
             </li>
           ))}
+          <li><button type="button" onClick={() => setListed([])}>Cerrar</button></li>
         </ul>
       )}
       <div className="timeline-axis" aria-hidden>
