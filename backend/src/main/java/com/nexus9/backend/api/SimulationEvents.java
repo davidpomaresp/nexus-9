@@ -37,8 +37,11 @@ class SimulationEvents {
 
     @EventListener
     void onAdvanced(SimulationAdvanced event) {
-        SimulationResponse state =
-                SimulationResponse.of(event.progress().simulation(), event.progress().openIncidents());
+        publish(SimulationResponse.of(event.progress().simulation(), event.progress().openIncidents()));
+    }
+
+    /** For changes without a new tick, like an acknowledgement. */
+    void publish(SimulationResponse state) {
         for (SseEmitter emitter : emitters.getOrDefault(state.id(), List.of())) {
             send(emitter, state);
         }

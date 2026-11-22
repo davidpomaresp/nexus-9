@@ -55,6 +55,7 @@ export interface Incident {
   openedAtTick: number;
   resolvedAtTick: number | null;
   affectedModules: ModuleName[];
+  acknowledgedAtTick: number | null;
 }
 
 /** One row per tick with the three modules joined. */
@@ -99,6 +100,8 @@ export const api = {
   advance: (id: string, ticks: number) => call<Simulation>('POST', `/simulations/${id}/advance?ticks=${ticks}`),
   run: (id: string, speed: number) => call<Simulation>('POST', `/simulations/${id}/run?speed=${speed}`),
   pause: (id: string) => call<Simulation>('POST', `/simulations/${id}/pause`),
+  acknowledge: (id: string, incident: string) =>
+    call<Incident>('POST', `/simulations/${id}/incidents/${incident}/acknowledge`),
   state: (id: string, fromTick: number) => call<StationState>('GET', `/simulations/${id}/state?fromTick=${fromTick}`),
 };
 

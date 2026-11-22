@@ -1,6 +1,7 @@
 package com.nexus9.backend.incident;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.nexus9.backend.PostgresTestBase;
 import com.nexus9.backend.domain.StationModule;
@@ -153,6 +154,37 @@ class IncidentServiceTest extends PostgresTestBase {
                 .toList();
     }
 
+    @Test
+    void acknowledgingKeepsTheFirstTickAndSurvivesNewTicks() {
+        Simulation sim = simulations.create(42, "solar-degradation");
+        simulations.advance(sim.id(), 130);
+        Incident deficit = incidents.find(sim.id(), Optional.of(IncidentStatus.OPEN)).getFirst();
+
+        assertThat(incidents.acknowledge(sim.id(), deficit.id()).acknowledgedAtTick()).isEqualTo(129);
+        simulations.advance(sim.id(), 20);
+
+        Incident again = incidents.acknowledge(sim.id(), deficit.id());
+        assertThat(again.acknowledgedAtTick()).isEqualTo(129);
+        assertThat(again.status()).isEqualTo(IncidentStatus.OPEN);
+    }
+
+    @Test
+    void resolvedOrUnknownIncidentsCannotBeAcknowledged() {
+        Simulation sim = simulations.create(7, "nominal");
+        Incident open = incident(sim.id(), 3);
+        repository.insertOpen(open);
+        repository.resolve(open.id(), 9);
+
+        assertThatThrownBy(() -> incidents.acknowledge(sim.id(), open.id()))
+                .isInstanceOf(IncidentResolvedException.class);
+        assertThatThrownBy(() -> incidents.acknowledge(sim.id(), UUID.randomUUID()))
+                .isInstanceOf(IncidentNotFoundException.class);
+
+        Simulation other = simulations.create(8, "nominal");
+        assertThatThrownBy(() -> incidents.acknowledge(other.id(), open.id()))
+                .isInstanceOf(IncidentNotFoundException.class);
+    }
+
     private static StationSnapshot battery(long tick, double percent) {
         return new StationSnapshot(tick,
                 new PowerReading(tick, false, 0, 6.5, 6.5, percent / 5, percent),
@@ -162,6 +194,6 @@ class IncidentServiceTest extends PostgresTestBase {
 
     private static Incident incident(UUID simulationId, long tick) {
         return new Incident(UUID.randomUUID(), simulationId, StationModule.POWER, "BATTERY_LOW",
-                Priority.HIGH, IncidentStatus.OPEN, tick, null, List.of(StationModule.OXYGEN));
+                Priority.HIGH, IncidentStatus.OPEN, tick, null, List.of(StationModule.OXYGEN), null);
     }
 }

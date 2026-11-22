@@ -230,6 +230,14 @@ h2 small { font-size: 10px; margin-left: 8px; letter-spacing: .1em; opacity: .8;
 
 /* Incidents */
 .incident-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.incident-row { display: flex; gap: 8px; align-items: center; }
+.incident-row > button.incident { flex: 1; min-width: 0; }
+.ack { flex: none; border-color: var(--p, var(--warn)); font-weight: 600; }
+.acked { flex: none; width: 92px; font: 11px var(--mono); color: var(--muted); text-align: center; }
+@media (max-width: 640px) {
+  .incident-row { flex-wrap: wrap; }
+  .ack, .acked { flex: 1 1 100%; }
+}
 button.incident {
   width: 100%; height: auto; text-align: left; border: 1px solid transparent; border-left: 4px solid var(--p);
 }
@@ -258,3 +266,4 @@ button.incident[aria-pressed="true"] { border-color: var(--accent); border-left-
   margin-right: 5px; background: var(--off); vertical-align: 1px;
 }
 .live.on::before { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
