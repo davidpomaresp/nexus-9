@@ -4,7 +4,6 @@ import type { useSimulation } from '../useSimulation';
 interface Props {
   station: ReturnType<typeof useSimulation>;
   scenarios: string[];
-  /** Shown between the setup and the clock controls, like the mission timeline. */
   children?: ReactNode;
 }
 

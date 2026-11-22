@@ -1,9 +1,6 @@
 import type { Incident } from '../api';
 
-/**
- * Lit while there are open incidents nobody has acknowledged: red (warning) if any of them is
- * critical, amber (caution) otherwise. Pressing it shows the most recent one.
- */
+// On while some open incident isn't acknowledged. Red if any of them is critical.
 export function MasterCaution({ incidents, onShow }: { incidents: Incident[]; onShow: (incident: Incident) => void }) {
   const pending = incidents
     .filter(i => i.status === 'OPEN' && i.acknowledgedAtTick === null)

@@ -12,7 +12,6 @@ interface Props {
 
 const LEVEL: Record<Priority, string> = { LOW: 'ok', MEDIUM: 'warn', HIGH: 'warn', CRITICAL: 'crit' };
 
-/** The loaded part of the mission: eclipses as bands, incident openings as buttons, and the cursor. */
 export function Timeline({ rows, incidents, currentTick, selected, focused, onFocus }: Props) {
   if (!rows.length) return null;
   const first = rows[0].tick;
