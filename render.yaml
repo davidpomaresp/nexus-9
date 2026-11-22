@@ -20,6 +20,8 @@ services:
         value: "50"
       - key: NEXUS_RATELIMIT_PERMINUTE
         value: "30"
+      - key: NEXUS_DEMO_SCENARIO
+        value: solar-degradation
       - key: NEXUS_RETENTION
         value: 24h
       - key: JAVA_TOOL_OPTIONS

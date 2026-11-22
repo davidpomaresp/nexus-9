@@ -51,6 +51,11 @@ class SimulationApiTest extends PostgresTestBase {
     }
 
     @Test
+    void thereIsNoDemoSimulationUnlessConfigured() throws Exception {
+        mvc.perform(get("/api/demo")).andExpect(status().isNotFound());
+    }
+
+    @Test
     void solarDegradationShowsCriticalModulesAndIncidents() throws Exception {
         String id = create(42, "solar-degradation");
         mvc.perform(post("/api/simulations/{id}/advance", id).param("ticks", "600"))

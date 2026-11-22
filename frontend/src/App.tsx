@@ -32,6 +32,14 @@ export function App() {
       if (id) void open(id);
       else close();
     };
+    // On the public demo the home page opens a shared simulation that is already under way.
+    if (window.location.pathname === '/') {
+      api.demo().then(({ id }) => {
+        if (window.location.pathname !== '/') return;
+        window.history.replaceState(null, '', simulationPath(id));
+        void open(id);
+      }).catch(() => undefined);
+    }
     load();
     window.addEventListener('popstate', load);
     return () => window.removeEventListener('popstate', load);
