@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -11,4 +12,6 @@ export default defineConfig({
   server: {
     proxy: { '/api': 'http://localhost:8080' },
   },
+  // e2e/ runs with Playwright against a running backend
+  test: { include: ['src/**/*.test.ts'] },
 });
