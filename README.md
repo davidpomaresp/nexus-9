@@ -1,12 +1,12 @@
 # NEXUS-9
 
-Un centro de control para una estación espacial que no existe. Hay un simulador que genera la telemetría de energía, oxígeno y comunicaciones, y un backend que la guarda, vigila con reglas y abre incidencias cuando algo va mal.
+Un centro de control para una estación espacial denominada "NEXUS-9". Hay un simulador que genera la telemetría de energía, oxígeno y comunicaciones, y un backend que la guarda, vigila con reglas y abre incidencias cuando algo va mal.
 
-Quería que las averías tuvieran causa y efecto, no números aleatorios en un dashboard. Si fallan los paneles solares, baja la generación, la batería se va vaciando, la estación recorta consumo para aguantar y al final el generador de oxígeno se queda sin energía. Todo eso sale del modelo, no está programado a mano.
+Quería que las averías tuvieran causa y efecto, no números aleatorios en un dashboard. Si fallan los paneles solares, baja la generación, la batería se va vaciando, la estación recorta consumo para aguantar y al final el generador de oxígeno se queda sin energía. Todo eso sale del modelo.
 
 ![CI](https://github.com/davidpomaresp/nexus-9/actions/workflows/ci.yml/badge.svg)
 
-**Pruébalo:** https://nexus-9-aftv.onrender.com. Se abre en una simulación de `solar-degradation` que ya va por el tick 600, con la avería avanzada; desde ahí puedes darle a play o crear otra. No hay login: es una demo pública con límites (te los cuento en [despliegue](docs/despliegue.md#límites-para-la-demo)). Está en el plan gratuito de Render, así que si nadie la ha abierto en un rato tarda alrededor de un minuto en despertar.
+**Pruébalo:** https://nexus-9-aftv.onrender.com.
 
 ![Panel de NEXUS-9 con el escenario solar-degradation en marcha](docs/img/panel.gif)
 
