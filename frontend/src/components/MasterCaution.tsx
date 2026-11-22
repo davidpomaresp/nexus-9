@@ -1,10 +1,12 @@
 import type { Incident } from '../api';
 
+const RANK = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+
 // On while some open incident isn't acknowledged. Red if any of them is critical.
 export function MasterCaution({ incidents, onShow }: { incidents: Incident[]; onShow: (incident: Incident) => void }) {
   const pending = incidents
     .filter(i => i.status === 'OPEN' && i.acknowledgedAtTick === null)
-    .sort((a, b) => b.openedAtTick - a.openedAtTick);
+    .sort((a, b) => RANK[a.priority] - RANK[b.priority] || b.openedAtTick - a.openedAtTick);
   if (!pending.length) {
     return <div className="master off" role="status">Sin alarmas pendientes</div>;
   }
