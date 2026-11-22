@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useRef, useState, type FormEvent, type ReactNode } from 'react';
 import type { useSimulation } from '../useSimulation';
 
 interface Props {
@@ -14,6 +14,9 @@ export function Controls({ station, scenarios, children }: Props) {
   const [seed, setSeed] = useState('42');
   const [seedError, setSeedError] = useState<string | null>(null);
   const [chosenSpeed, setSpeed] = useState(5);
+  // A ref, not only state: a quick double click can fire twice before the button re-renders disabled.
+  const creating = useRef(false);
+  const [busy, setBusy] = useState(false);
   const ready = station.sim !== null;
   const running = station.sim?.running ?? false;
   const speed = running ? station.sim!.speed : chosenSpeed;
@@ -27,7 +30,13 @@ export function Controls({ station, scenarios, children }: Props) {
       return;
     }
     setSeedError(null);
-    void station.create(value, scenario);
+    if (creating.current) return;
+    creating.current = true;
+    setBusy(true);
+    void station.create(value, scenario).finally(() => {
+      creating.current = false;
+      setBusy(false);
+    });
   }
 
   return (
@@ -44,7 +53,7 @@ export function Controls({ station, scenarios, children }: Props) {
           <input value={seed} inputMode="numeric" onChange={e => setSeed(e.target.value)}
             aria-invalid={seedError !== null} />
         </label>
-        <button type="submit" className="primary">Nueva simulación</button>
+        <button type="submit" className="primary" disabled={busy}>Nueva simulación</button>
         {seedError && <span className="field-error">{seedError}</span>}
       </form>
 
