@@ -103,20 +103,3 @@ Los errores siguen el formato Problem Details (RFC 9457).
 ## Stack
 
 Java 21 · Spring Boot 4 · PostgreSQL 17 · React 19 · TypeScript · Vite · Spring JDBC · Flyway · JUnit 5 · Testcontainers · Vitest · ESLint · Docker · GitHub Actions · Render · Neon
-
-## Documentación
-
-- [Especificación](docs/especificacion.md)
-- [Plan de la v0.1](docs/plan-v0.1.md)
-- [Decisiones de arquitectura (ADR)](docs/adr/)
-- [Cómo está desplegado](docs/despliegue.md)
-- [Cambios por versión](CHANGELOG.md)
-
-## Lo siguiente
-
-- Sacar el simulador a un proceso aparte que mande los eventos por HTTP, para enfrentarme a reintentos y eventos desordenados de verdad.
-- Operadores con login y roles.
-
-## Licencia
-
-[MIT](LICENSE)
